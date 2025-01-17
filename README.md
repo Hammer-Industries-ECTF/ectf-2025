@@ -18,6 +18,6 @@ To upload the example:
     -(Windows PS) ".\connect_max78000.ps1"
     -(old docker terminal) "docker compose run app"
     -(docker terminal) "cd ectf-2025"
-    -(docker terminal) "python tools/program_uc.py -n example"
+    -(docker terminal) "python3 tools/program_uc.py -n example"
 
     I think that the issue is that the wsl instance of docker-desktop doesn't know the port exists the first time docker is opened so it doesn't load in with the port. But if you connect the port before starting the container once, I think it will terminate the instance and docker-desktop forgets the port was there.  Not entirely sure though.

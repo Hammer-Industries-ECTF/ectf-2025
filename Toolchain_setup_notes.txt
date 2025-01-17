@@ -1,3 +1,5 @@
+
+sudo apt-get install rustup
 cargo install cargo-generate
 cargo install cargo-binutils
 rustup component add llvm-tools-preview

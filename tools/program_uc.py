@@ -2,8 +2,8 @@ from loguru import logger
 import argparse
 from pathlib import Path
 import asyncio
-from tools.utils import package_binary, run_shell
-import tools.update as flash
+from utils import package_binary, run_shell
+import update as flash
 import glob
 import os
 from serial import serialutil
@@ -71,7 +71,7 @@ def main():
         try:
             flash.image_update(f"{os.getcwd()}/projects/build/{project_name}.img", "/dev/ttyACM0")
         except serialutil.SerialException as e:
-            print("Did not detect MAX78000. Did you remember to pass the port to docker (.\connect_max78000.ps1 -y in docker-tool-suite folder in windows powershell)?")
+            print("Did not detect MAX78000. Did you remember to pass the port to docker (.\\connect_max78000.ps1 -y in docker-tool-suite folder in windows powershell)?")
 
 if __name__ == '__main__':
     main()
