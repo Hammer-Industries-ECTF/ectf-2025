@@ -1,0 +1,35 @@
+cargo install cargo-generate
+cargo install cargo-binutils
+rustup component add llvm-tools-preview
+rustup target add thumbv7em-none-eabihf
+
+cd rust_example/example && cargo build && arm-none-eabi-objcopy -O binary ./target/thumbv7em-none-eabihf/debug/example ../example.bin && cd ../.. && python tools/build_example.py -b ./rust_example/example.bin -i ./rust_example/example.img
+
+python tools/update.py --infile ./rust_example/example.img --port /dev/ttyACM0
+
+in ectf-2025
+pip install -e .
+pip install loguru
+
+In 2024-ectf
+sudo openocd -f interface/cmsis-dap.cfg -f target/max78000.cfg -c "init" &
+telnet localhost 4444
+reset halt
+step
+step
+step
+mdw 0x40080400 1 (read register)
+mww 0x40080400 1 (write register)
+program /docker-tool-suite/ectf-2025/rust_example/example/target/thumbv7em-none-eabihf/debug/example verify reset
+jobs
+kill %1
+
+Disassembling Raw Binarires
+
+To disassemble the bootloader, I ran:
+arm-none-eabi-objdump -D -b binary -m arm -Mforce-thumb --adjust-vma=
+0x10000000 ./rust_example/insecure.bin > disassembled_insecure.txt
+
+To disassemble the example:
+arm-none-eabi-objdump -D -Mforce-thumb ./rust_example/example/target/
+thumbv7em-none-eabihf/debug/example > disassembled_example.txt
