@@ -5,7 +5,7 @@ A repository containing private resources to compete in the 2025 Mitre ECTF Comp
 The example is designed for the MAX78000FTHR evaluation board. It turns on a RED LED on the board using one of the GPIO.
 To upload the example:
 
-1) Enter the docker environment by running "docker compose run app" within the "docker-tool-suite" folder
+1) Enter the docker environment by running "docker compose run max78000-rust" within the "docker-tool-suite" folder
 2) Navigate to /docker-tool-suite/ectf-2025/"
 3) Holding SW1 (PB diagonally opposite the JTAG heard w.r.t. the MAX78000 IC), connect the controller to the computer with a USB
 4) In a (separate) windows powershell navigate to /docker-tool-suite/
@@ -20,3 +20,6 @@ To upload the example:
     -(docker terminal) "python3 tools/program_uc.py -n example"
 
     I think that the issue is that the wsl instance of docker-desktop doesn't know the port exists the first time docker is opened so it doesn't load in with the port. But if you connect the port before starting the container once, I think it will terminate the instance and docker-desktop forgets the port was there.  Not entirely sure though.
+
+    ## Other notes (new projects)
+    You will need to update the cargo.toml file with the new project name
