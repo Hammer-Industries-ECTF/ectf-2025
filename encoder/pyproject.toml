@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ectf25_design"
+version = "1.0.0a0"
+requires-python = ">=3.10"
+dependencies = [
+    "pycryptodome>=3.21"
+]
