@@ -11,7 +11,7 @@ python tools/update.py --infile ./rust_example/example.img --port /dev/ttyACM0
 
 in ectf-2025
 pip install -e .
-pip install loguru
+pip install pycryptodome
 
 In 2024-ectf
 sudo openocd -f interface/cmsis-dap.cfg -f target/max78000.cfg -c "init" &
