@@ -1,15 +1,16 @@
 from secrets import token_urlsafe
 from json import dumps
 
+
 def gen_secrets(channels: list[int]) -> bytes:
     # Bounds checking
-    if type(channels) != list:
+    if type(channels) is not list:
         raise TypeError("channels is not a list")
     channels: set[int] = set(channels)
     channels.add(0)
     if len(channels) > 9:
         raise ValueError(f"Too many channels: {len(channels)-1} (max 8)")
-    if any((type(channel_id) != int for channel_id in channels)):
+    if any((type(channel_id) is not int for channel_id in channels)):
         raise TypeError("Detected non-integer channel")
     if any((channel_num < 0 or channel_num > 2**32 - 1 for channel_num in channels)):
         raise ValueError("Invalid channel number: not-representable as u32")
@@ -19,7 +20,7 @@ def gen_secrets(channels: list[int]) -> bytes:
     for _ in range(len(channels)+1):
         secret_nums.append(token_urlsafe(32))
         secret_nums.append(token_urlsafe(16))
-    
+
     # Non-duplicate check
     while len(set(secret_nums)) < len(secret_nums):
         # Generate 256-bit AES keys and 128-bit CBC IVs
