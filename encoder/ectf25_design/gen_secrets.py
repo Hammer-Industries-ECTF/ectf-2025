@@ -18,8 +18,8 @@ def gen_secrets(channels: list[int]) -> bytes:
     # Generate 256-bit AES keys and 128-bit CBC IVs
     secret_nums: list[str] = list()
     for _ in range(len(channels)+1):
-        secret_nums.append(token_urlsafe(32))
-        secret_nums.append(token_urlsafe(16))
+        secret_nums.append(token_urlsafe(32) + "=")
+        secret_nums.append(token_urlsafe(16) + "==")
 
     # Non-duplicate check
     while len(set(secret_nums)) < len(secret_nums):

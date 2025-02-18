@@ -22,7 +22,7 @@ class Encoder:
         if "master" not in self._secrets or "0" not in self._secrets:
             raise ValueError("Could not find master secret pair or channel 0 secret pair")
         if any(((int(channel_num) < 0 or int(channel_num) > 2**32 - 1)
-                for channel_num in secrets)):
+                for channel_num in secrets if channel_num != 'master')):
             raise ValueError("Found invalid channel numbers in secrets")
         if any((len(secret[0]) != 32 for secret in self._secrets.values())):
             raise ValueError("Found invalid AES key: not 256 bits")
@@ -57,9 +57,43 @@ class Encoder:
         master_cipher: AES.CbcMode = AES.new(self._secrets["master"][0],
                                              AES.MODE_CBC,
                                              iv=self._secrets["master"][1])
-        encoded_frame: bytes = master_cipher.encrypt(encoded_data
-                                                     + timestamp.to_bytes(8, 'little')
+        encoded_frame: bytes = master_cipher.encrypt(timestamp.to_bytes(8, 'little')
                                                      + channel.to_bytes(4, 'little')
-                                                     + len(frame).to_bytes(4, 'little'))
+                                                     + len(frame).to_bytes(4, 'little')
+                                                     + encoded_data)
 
         return encoded_frame
+
+
+def _verify_encoder(encoded_frame: bytes,
+                    secrets: bytes,
+                    expected_channel: int,
+                    expected_frame: bytes,
+                    expected_timestamp: int) -> bool:
+    # Recover secrets
+    secrets_data: dict[str, list[str]] = loads(secrets.decode("utf-8"))
+    secrets = {k: (urlsafe_b64decode(v[0]), urlsafe_b64decode(v[1]))
+               for k, v in secrets_data.items()}
+
+    # Decrypt frame master layer
+    master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
+                                         AES.MODE_CBC,
+                                         iv=secrets["master"][1])
+    decoded_frame: bytes = master_cipher.decrypt(encoded_frame)
+    timestamp: int = int.from_bytes(decoded_frame[0:8], 'little')
+    channel: int = int.from_bytes(decoded_frame[8:12], 'little')
+    frame_length: int = int.from_bytes(decoded_frame[12:16], 'little')
+
+    assert channel == expected_channel, "Decoded wrong channel"
+    assert timestamp == expected_timestamp, "Decoded wrong timestamp"
+
+    # Decrypt frame channel layer
+    channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
+                                          AES.MODE_CBC,
+                                          iv=secrets[str(channel)][1])
+    frame_data: bytes = channel_cipher.decrypt(decoded_frame[16:])
+    frame_data = frame_data[0:frame_length]
+
+    assert frame_data == expected_frame, "Decoded wrong frame"
+
+    return True
