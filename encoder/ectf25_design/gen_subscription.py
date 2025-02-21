@@ -16,7 +16,7 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
 
     # Secrets bounds checking
     if len(secrets) > 10:
-        raise ValueError(f"Too many secret pairs generated: {len(secrets)} (max 8+2)")
+        raise ValueError("Too many secret pairs generated (max 8+2)", len(secrets))
     if "master" not in secrets or "0" not in secrets:
         raise ValueError("Could not find master secret pair or channel 0 secret pair")
     if any(((int(channel_num) < 0 or int(channel_num) > 2**32 - 1)
@@ -38,6 +38,8 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
         raise TypeError("end timestamp is not an int")
     if start < 0 or end < 0 or start > 2**64 - 1 or end > 2**64 - 1:
         raise ValueError("timestamps are not representable as u64")
+    if end < start:
+        raise ValueError("end is less than start")
     if type(channel) is not int:
         raise TypeError("channel is not an int")
     if channel < 0 or channel > 2**32 - 1:
@@ -45,7 +47,7 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
     if channel == 0:
         raise ValueError("Cannot generate subscription for channel 0")
     if str(channel) not in secrets:
-        raise ValueError(f"Could not find secret for channel {channel}")
+        raise ValueError("Could not find secret for channel:", channel)
 
     # Encrypt package
     channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
@@ -61,41 +63,3 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
                                                   + encoded_device_id)
 
     return encoded_update
-
-
-def _subscription_verify(subscription_update_package: bytes,
-                         secrets: bytes,
-                         expected_device_id: int,
-                         expected_start: int,
-                         expected_end: int,
-                         expected_channel: int) -> bool:
-    # Recover secrets
-    secrets_data: dict[str, list[str]] = loads(secrets.decode("utf-8"))
-    secrets: dict[str, tuple[bytes, bytes]] = {k:
-                                               (urlsafe_b64decode(v[0]), urlsafe_b64decode(v[1]))
-                                               for k, v in secrets_data.items()}
-
-    # Decrypt package master layer
-    master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
-                                         AES.MODE_CBC,
-                                         iv=secrets["master"][1])
-    decoded_update: bytes = master_cipher.decrypt(subscription_update_package)
-    channel: int = int.from_bytes(decoded_update[0:16], 'little')
-    end: int = int.from_bytes(decoded_update[16:24], 'little')
-    start: int = int.from_bytes(decoded_update[24:32], 'little')
-    encoded_device_id: bytes = decoded_update[32:48]
-
-    assert channel == expected_channel, "Decoded wrong channel"
-    assert end == expected_end, "Decoded wrong end"
-    assert start == expected_start, "Decoded wrong start"
-
-    # Decrypt package channel layer
-    channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
-                                          AES.MODE_CBC,
-                                          iv=secrets[str(channel)][1])
-    device_id: bytes = channel_cipher.decrypt(encoded_device_id)
-    device_id: int = int.from_bytes(device_id, 'little')
-
-    assert device_id == expected_device_id, "Decoded wrong device_id"
-
-    return True
