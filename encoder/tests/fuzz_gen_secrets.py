@@ -67,7 +67,6 @@ def fuzz(buf: bytes):
             raise e
     else:
         output_verifier(gen_secrets_output)
-    
 
 
 fuzz_exec = PythonFuzz(fuzz)

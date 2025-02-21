@@ -112,7 +112,6 @@ def fuzz(buf: bytes):
                     raise e
             else:
                 output_verifier(encode_output, *inputs)
-    
 
 
 fuzz_exec = PythonFuzz(fuzz)

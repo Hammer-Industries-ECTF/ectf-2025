@@ -103,8 +103,7 @@ def fuzz(buf: bytes):
             if e.args[0] not in EXPECTED_VALUE_ERRORS:
                 raise e
         else:
-            output_verifier(gen_subscription_output, *inputs)
-    
+            output_verifier(gen_subscription_output, *inputs)  
 
 
 fuzz_exec = PythonFuzz(fuzz)
