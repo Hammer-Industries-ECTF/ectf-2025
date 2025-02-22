@@ -42,14 +42,14 @@ def build_project(project_name):
         print("\033[31mError\033[0m: Project Name must be alphanumeric")
         raise ValueError("Project Name Invalid")
 
-    folders = glob.glob(os.getcwd() + "/projects/*")
+    folders = glob.glob(os.getcwd() + "/*")
     project_names = [os.path.basename(folder) for folder in folders if os.path.basename(folder) != "build"]
 
     if(not(project_name in project_names)):
-        print("\033[31mError\033[0m: Project folder not found. Ensure --name arg is a subfolder in $PWD/projects/")
+        print("\033[31mError\033[0m: Project folder not found. Ensure --name arg is a subfolder in $PWD/")
         raise ValueError("Project Name Invalid")
     
-    project_folder = os.getcwd() + "/projects/" + project_name + "/"
+    project_folder = os.getcwd() + "/" + project_name + "/"
 
     if(generate_elf_and_bin(project_folder, project_name) != 0):
         print("build_project: Error generating elf and bin. Terminating...")
@@ -57,7 +57,7 @@ def build_project(project_name):
 
     disassemble_elf(project_folder, project_name)
 
-    package_binary(f"{os.getcwd()}/projects/build/{project_name}/{project_name}.bin", f"{os.getcwd()}/projects/build/{project_name}/{project_name}.img")
+    package_binary(f"{os.getcwd()}/build/{project_name}/{project_name}.bin", f"{os.getcwd()}/build/{project_name}/{project_name}.img")
 
     return 0
 
@@ -69,7 +69,7 @@ def main():
 
     parser.add_argument(
         "-n", "--name", required=True, type=Path,
-        help="Folder name of project within ectf-2025/projects"
+        help="Folder name of project within ectf-2025/"
     )
 
     parser.add_argument(
@@ -92,7 +92,7 @@ def main():
 
     if(flash_requested):
         try:
-            flash.image_update(f"{os.getcwd()}/projects/build/{project_name}/{project_name}.img", "/dev/ttyACM0")
+            flash.image_update(f"{os.getcwd()}/build/{project_name}/{project_name}.img", "/dev/ttyACM0")
         except serialutil.SerialException as e:
             print("Did not detect MAX78000. Did you remember to pass the port to docker (.\\connect_max78000.ps1 -y in docker-tool-suite folder in windows powershell)?")
 

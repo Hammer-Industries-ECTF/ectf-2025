@@ -14,6 +14,7 @@ import argparse
 import serial
 from pathlib import Path
 from tqdm import tqdm
+from time import sleep
 
 PAGE_SIZE = 8192
 APP_PAGES = 28
@@ -64,6 +65,7 @@ def image_update(in_file, port):
         # Send update command
         print("Requesting update")
         ser.write(b"\x00")
+        sleep(0.01)
 
         verify_resp(ser)
         verify_resp(ser)
