@@ -1,7 +1,11 @@
 [package]
 name = "decoder"
-authors = ["Spencer Bowles"]
+version = "1.0.0-alpha.0"
+authors = ["Noah Rediker <nrediker@purdue.edu>", "Spencer Bowles <bowles7@purdue.edu>", "Aidan Jacobsen <jacobse7@purdue.edu>", "Eli Wood <wood269@purdue.edu>"]
 edition = "2021"
+description = "Hammer Industries' (Purdue2) decoder design for the MITRE eCTF 2025."
+readme = "README.md"
+keywords = ["mitre", "ectf", "embedded", "security", "decoder", "aes", "uart", "max78000", "purdue"]
 publish = false
 
 [package.metadata.docs.rs]
@@ -17,6 +21,3 @@ max7800x-hal = "0.6.0"
 panic-halt = "1.0.0"
 panic-semihosting = "0.6.0"
 rand = { version = "0.8.5", default-features = false }
-
-# Uncomment if you want to use semihosting
-# cortex-m-semihosting = "0.5"

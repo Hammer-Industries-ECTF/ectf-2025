@@ -1,6 +1,11 @@
 #![no_std]
 #![no_main]
 
+mod commands;
+mod message;
+mod sys;
+mod utils;
+
 pub extern crate max7800x_hal as hal;
 pub use hal::pac;
 pub use hal::entry;
