@@ -3,6 +3,12 @@
 //! - Information about message structure, encrypted and decrypted
 //! - Functions for transmitting and receiving data
 
+pub mod receive;
+pub mod transmit;
+
+extern crate alloc;
+use alloc::vec::Vec;
+
 #[derive(Debug, Clone)]
 pub enum HostRawMessage {}
 

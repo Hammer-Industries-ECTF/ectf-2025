@@ -7,8 +7,8 @@ mod sys;
 mod utils;
 
 pub extern crate max7800x_hal as hal;
-pub use hal::pac;
-pub use hal::entry;
+use hal::pac;
+use hal::entry;
 
 // use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
