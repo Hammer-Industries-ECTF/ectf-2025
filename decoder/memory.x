@@ -1,5 +1,5 @@
 MEMORY {
-  FLASH    (rx) : ORIGIN = 0x10000000, LENGTH = 0x80000 /* 504 KiB */
+  FLASH    (rx) : ORIGIN = 0x10000000, LENGTH = 0x78000 /* 504 KiB */
   AES_KEYS (rx) : ORIGIN = 0x1007E000, LENGTH = 0x02000 /*   8 KiB */
   RAM      (rw) : ORIGIN = 0x20000000, LENGTH = 0x20000 /* 128 KiB */
 }
