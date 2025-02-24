@@ -58,6 +58,8 @@ fn main() -> ! {
         // *DECRYPT
 
         // CALL FUNCTION
+        let host_message = message::HostMessage::Debug;
+        let response_message = commands::message_respond(host_message);
 
         // TX
     }

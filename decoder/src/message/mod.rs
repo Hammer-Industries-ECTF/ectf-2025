@@ -9,34 +9,28 @@ pub mod transmit;
 extern crate alloc;
 use alloc::vec::Vec;
 
-use crate::sys::Subscription;
-
-#[derive(Debug, Clone)]
-pub struct HostDebugMessage {}
-
-#[derive(Debug, Clone)]
-pub struct HostListMessage {}
+use crate::sys::secure_memory::Subscription;
 
 #[derive(Debug, Clone)]
 pub struct HostUpdateMessage {
-    channel_id: u32, 
-    end: u64,
-    start: u64, 
-    encrypted_decoder_id: u128, 
+    pub channel_id: u32, 
+    pub end: u64,
+    pub start: u64, 
+    pub encrypted_decoder_id: u128, 
 }
 
 #[derive(Debug, Clone)]
 pub struct HostDecodeMessage {
-    timestamp: u64, 
-    channel_id: u32, 
-    frame_length: u32, 
-    encrypted_frame: Vec<u128>,
+    pub timestamp: u64, 
+    pub channel_id: u32, 
+    pub frame_length: u32, 
+    pub encrypted_frame: Vec<u128>,
 }
 
 #[derive(Debug, Clone)]
 pub enum HostMessage {
-    Debug  (HostDebugMessage),
-    List   (HostListMessage),
+    Debug,
+    List,
     Update (HostUpdateMessage),
     Decode (HostDecodeMessage), 
 }
@@ -46,21 +40,18 @@ pub struct ResponseDebugMessage {}
 
 #[derive(Debug, Clone)]
 pub struct ResponseListMessage {
-    subscriptions: Vec<Subscription>
+    pub subscriptions: Vec<Subscription>
 }
 
 #[derive(Debug, Clone)]
-pub struct ResponseUpdateMessage {}
-
-#[derive(Debug, Clone)]
 pub struct ResponseDecodeMessage {
-    frame: Vec<u8>
+    pub frame: Vec<u8>
 }
 
 #[derive(Debug, Clone)]
 pub enum ResponseMessage {
     Debug  (ResponseDebugMessage),
     List   (ResponseListMessage),
-    Update (ResponseUpdateMessage),
+    Update (()),
     Decode (ResponseDecodeMessage), 
 }
