@@ -1,5 +1,4 @@
 {
-    "flake8.cwd": "${workspaceFolder}/encoder",
     "flake8.args": [
         "--max-line-length=99",
         "--extend-select=W504"

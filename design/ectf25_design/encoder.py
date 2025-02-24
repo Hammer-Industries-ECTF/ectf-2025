@@ -5,6 +5,7 @@ from Crypto.Cipher import AES
 
 class Encoder:
     _secrets: dict[str, tuple[bytes, bytes]] = None
+    _company_stamp: bytes = "HammerIndustries".encode("ascii")
 
     def __init__(self, secrets: bytes):
         # Recover secrets
@@ -53,7 +54,9 @@ class Encoder:
         channel_cipher: AES.CbcMode = AES.new(self._secrets[str(channel)][0],
                                               AES.MODE_CBC,
                                               iv=self._secrets[str(channel)][1])
-        encoded_data: bytes = channel_cipher.encrypt(frame + (b'\x00' * pad_bytes_needed))
+        encoded_data: bytes = channel_cipher.encrypt(self._company_stamp
+                                                     + frame
+                                                     + (b'\x00' * pad_bytes_needed))
         master_cipher: AES.CbcMode = AES.new(self._secrets["master"][0],
                                              AES.MODE_CBC,
                                              iv=self._secrets["master"][1])

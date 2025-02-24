@@ -9,6 +9,9 @@ from ectf25_design.encoder import Encoder
 from ectf25_design.gen_secrets import gen_secrets
 
 
+COMPANY_STAMP = "HammerIndustries".encode("ascii")
+
+
 INIT_EXPECTED_TYPE_ERRORS = {
     "secrets is not a byte-string",
 }
@@ -77,9 +80,11 @@ def output_verifier(encode_output: bytes,
     channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
                                           AES.MODE_CBC,
                                           iv=secrets[str(channel)][1])
-    frame_data: bytes = channel_cipher.decrypt(decoded_frame[16:])
-    frame_data = frame_data[0:frame_length]
+    frame_package: bytes = channel_cipher.decrypt(decoded_frame[16:])
+    company_stamp = frame_package[0:16]
+    frame_data = frame_package[16:16+frame_length]
 
+    assert company_stamp == COMPANY_STAMP, "Decoded wrong company stamp"
     assert frame_data == expected_frame, "Decoded wrong frame"
 
 
