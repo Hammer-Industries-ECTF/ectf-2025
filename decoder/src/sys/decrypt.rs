@@ -12,6 +12,10 @@ fn decrypt_frame() {
 
 }
 
-fn decrypt_bytes() {
+fn decrypt_blocks() {
+
+}
+
+fn decrypt_block() {
 
 }
