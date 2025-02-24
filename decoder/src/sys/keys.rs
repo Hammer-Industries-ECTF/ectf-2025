@@ -6,7 +6,7 @@ const KEY_SIZE: usize = 0x20;
 #[link_section = ".aes_keys"]
 #[repr(align(4096))]
 #[no_mangle]
-static FLASH_DATA: [[u8; 32]; 9] = *[
+static FLASH_DATA: [[u8; 32]; 10] = *[
     b"MESSAGE_KEY",
     b"CHANNEL0_KEY",
     b"CHANNEL1_KEY",
@@ -15,7 +15,8 @@ static FLASH_DATA: [[u8; 32]; 9] = *[
     b"CHANNEL4_KEY",
     b"CHANNEL5_KEY",
     b"CHANNEL6_KEY",
-    b"CHANNEL7_KEY"
+    b"CHANNEL7_KEY",
+    b"CHANNEL8_KEY"
 ];
 
 pub enum KeyType {
@@ -27,7 +28,8 @@ pub enum KeyType {
     Channel4,
     Channel5,
     Channel6,
-    Channel7
+    Channel7,
+    Channel8
 }
 
 macro_rules! generate_key_handler {
@@ -49,3 +51,4 @@ generate_key_handler!(CHANNEL4_KEY, 5);
 generate_key_handler!(CHANNEL5_KEY, 6);
 generate_key_handler!(CHANNEL6_KEY, 7);
 generate_key_handler!(CHANNEL7_KEY, 8);
+generate_key_handler!(CHANNEL8_KEY, 8);
