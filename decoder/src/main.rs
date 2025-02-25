@@ -14,9 +14,12 @@ use hal::entry;
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 use cortex_m_semihosting::heprintln; // uncomment to use this for printing through semihosting
 
+use sys::allocator::init_heap;
+
 #[entry]
 fn main() -> ! {
     heprintln!("Hello, World! You're semihosting!");
+    init_heap();
     let p = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
 

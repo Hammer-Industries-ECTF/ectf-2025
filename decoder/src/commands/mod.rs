@@ -1,6 +1,6 @@
 use crate::message::{HostMessage, ResponseMessage};
 use crate::message::{HostUpdateMessage, HostDecodeMessage};
-use crate::message::{ResponseDebugMessage, ResponseListMessage, ResponseUpdateMessage, ResponseDecodeMessage};
+use crate::message::{ResponseDebugMessage, ResponseListMessage, ResponseDecodeMessage};
 
 use crate::sys::secure_memory::{retrieve_secret, retrieve_subscription, retrieve_subscriptions};
 
