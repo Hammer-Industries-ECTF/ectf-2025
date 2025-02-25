@@ -2,22 +2,28 @@ use crate::message::{HostMessage, ResponseMessage};
 use crate::message::{HostUpdateMessage, HostDecodeMessage};
 use crate::message::{ResponseDebugMessage, ResponseListMessage, ResponseDecodeMessage};
 
-use crate::message::packet::extract_decoder_id;
+use crate::message::packet::verify_company_stamp;
 use crate::message::packet::PacketError;
 
-use crate::sys::secure_memory::{overwrite_subscription, retrieve_channel_secret, retrieve_subscription, retrieve_subscriptions, verify_decoder_id};
+use crate::sys::secure_memory::{overwrite_subscription, retrieve_subscription, retrieve_subscriptions, verify_decoder_id};
 use crate::sys::secure_memory::{Subscription, SecureMemoryError};
 
-use crate::sys::decrypt::{decrypt_block, decrypt_blocks};
+use crate::sys::decrypt::{decrypt_company_stamp, decrypt_decoder_id, decrypt_frame};
+
+use crate::utils::timestamp::{get_timestamp, set_timestamp};
 
 #[derive(Debug, Clone)]
 pub enum CommandError {
+    DebugRequested,
     InvalidSubscriptionChannel(u32),
-    InvalidSecretChannel(u32),
     NotSubscribed(u32),
     SubscriptionFuture(u32, u64),
     SubscriptionPast(u32, u64),
     InvalidDecoderID,
+    FramePast(u64),
+    FrameLengthIncorrect(u32),
+    FrameCompanyStampIncorrect(u128),
+    EmptyFrameData,
     SecureMemoryError(SecureMemoryError),
     PacketError(PacketError)
 }
@@ -34,6 +40,7 @@ pub fn message_respond(host_message: HostMessage) -> Result<ResponseMessage, Com
 fn debug_info() -> Result<ResponseDebugMessage, CommandError> {
     // idk man
     Ok(ResponseDebugMessage{})
+    // Err(CommandError::DebugRequested)
 }
 
 fn list_subscriptions() -> Result<ResponseListMessage, CommandError> {
@@ -44,11 +51,7 @@ fn list_subscriptions() -> Result<ResponseListMessage, CommandError> {
 
 fn update_subscription(message: HostUpdateMessage) -> Result<(), CommandError> {
     if retrieve_subscription(message.channel_id).is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
-    let secret = retrieve_channel_secret(message.channel_id);
-    if secret.is_none() { return Err(CommandError::InvalidSecretChannel(message.channel_id)); }
-    let secret = secret.unwrap();
-    let decrypted_decoder_id_block = decrypt_block(secret, message.encrypted_decoder_id);
-    let decoder_id = extract_decoder_id(decrypted_decoder_id_block);
+    let decoder_id = decrypt_decoder_id(message.channel_id, message.encrypted_decoder_id);
     if decoder_id.is_err() { return Err(CommandError::PacketError(decoder_id.unwrap_err())); }
     let decoder_id = decoder_id.unwrap();
     if !verify_decoder_id(decoder_id) { return Err(CommandError::InvalidDecoderID); }
@@ -65,18 +68,19 @@ fn update_subscription(message: HostUpdateMessage) -> Result<(), CommandError> {
 }
 
 fn decode_message(message: HostDecodeMessage) -> Result<ResponseDecodeMessage, CommandError> {
-    // Verify increasing timestamp
-    // Verify frame length
+    if message.timestamp <= get_timestamp() { return Err(CommandError::FramePast(message.timestamp)); }
+    if message.encrypted_frame.len() < 2 { return Err(CommandError::EmptyFrameData); }
+    if message.frame_length == 0 || message.frame_length > 64 { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
+    if ((((message.frame_length - 1) / 16) + 2) as usize) != message.encrypted_frame.len() { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
     let subscription = retrieve_subscription(message.channel_id);
     if subscription.is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
     let subscription = subscription.unwrap();
     if !subscription.valid { return Err(CommandError::NotSubscribed(message.channel_id)); }
     if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
     if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
-    let secret = retrieve_channel_secret(message.channel_id);
-    if secret.is_none() { return Err(CommandError::InvalidSecretChannel(message.channel_id)); }
-    // Decrypt and verify stamp
-    // Decrypt frame data
-    // Update timestamp
-    todo!()
+    let decrypted_company_stamp = decrypt_company_stamp(message.channel_id, *message.encrypted_frame.first().unwrap());
+    if !verify_company_stamp(decrypted_company_stamp) { return Err(CommandError::FrameCompanyStampIncorrect(decrypted_company_stamp)); }
+    let decrypted_frame = decrypt_frame(message.channel_id, message.encrypted_frame);
+    set_timestamp(message.timestamp);
+    Ok(ResponseDecodeMessage{frame: decrypted_frame})
 }

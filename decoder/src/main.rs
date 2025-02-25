@@ -16,8 +16,6 @@ use cortex_m_semihosting::heprintln; // uncomment to use this for printing throu
 
 use sys::allocator::init_heap;
 
-static TIMESTAMP: u64 = 0u64;
-
 #[entry]
 fn main() -> ! {
     heprintln!("Hello, World! You're semihosting!");
@@ -55,7 +53,6 @@ fn main() -> ! {
     // TODO INIT AES
     
     // INIT TEMP BUFFERS
-    // INIT TIMESTAMP
 
     loop {
         // RX
