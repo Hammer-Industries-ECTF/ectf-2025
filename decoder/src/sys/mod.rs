@@ -8,3 +8,4 @@
 pub mod allocator;
 pub mod secure_memory;
 pub mod decrypt;
+mod flash;
