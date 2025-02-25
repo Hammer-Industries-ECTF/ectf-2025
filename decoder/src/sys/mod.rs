@@ -5,6 +5,7 @@
 //! - Interupts / Handlers
 //! - System Watchdog (his name is Cupcake)
 
+pub mod aes;
 pub mod allocator;
 pub mod secure_memory;
 pub mod decrypt;
