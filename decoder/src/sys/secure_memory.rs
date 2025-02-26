@@ -1,6 +1,8 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+use hal::aes::{AesKey, AesBlock};
+
 #[derive(Debug, Clone)]
 pub enum SecureMemoryError {
     InvalidSubscriptionChannel(u32),
@@ -18,8 +20,8 @@ pub struct Subscription {
 #[derive(Debug, Clone)]
 pub struct Secret {
     pub channel_id: u32,
-    pub aes_key: [u128; 2],
-    pub aes_iv: u128
+    pub aes_key: AesKey,
+    pub aes_iv: AesBlock
 }
 
 pub fn retrieve_subscription(channel_id: u32) -> Option<Subscription> {

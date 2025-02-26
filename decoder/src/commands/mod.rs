@@ -2,6 +2,8 @@ use crate::message::{HostMessage, ResponseMessage};
 use crate::message::{HostUpdateMessage, HostDecodeMessage};
 use crate::message::{ResponseDebugMessage, ResponseListMessage, ResponseDecodeMessage};
 
+use hal::aes::Aes;
+
 use crate::message::packet::verify_company_stamp;
 
 use crate::sys::secure_memory::{overwrite_subscription, retrieve_subscription, retrieve_subscriptions, verify_decoder_id};
@@ -27,12 +29,12 @@ pub enum CommandError {
     DecryptError(DecryptError)
 }
 
-pub fn execute_command(host_message: HostMessage) -> Result<ResponseMessage, CommandError> {
+pub fn execute_command(aes: &Aes, host_message: HostMessage) -> Result<ResponseMessage, CommandError> {
     match host_message {
         HostMessage::Debug => Ok(ResponseMessage::Debug(debug_info()?)),
         HostMessage::List => Ok(ResponseMessage::List(list_subscriptions()?)),
-        HostMessage::Update(host_update_message) => Ok(ResponseMessage::Update(update_subscription(host_update_message)?)),
-        HostMessage::Decode(host_decode_message) => Ok(ResponseMessage::Decode(decode_message(host_decode_message)?))
+        HostMessage::Update(host_update_message) => Ok(ResponseMessage::Update(update_subscription(&aes, host_update_message)?)),
+        HostMessage::Decode(host_decode_message) => Ok(ResponseMessage::Decode(decode_message(&aes, host_decode_message)?))
     }
 }
 
@@ -48,9 +50,9 @@ fn list_subscriptions() -> Result<ResponseListMessage, CommandError> {
     Ok(ResponseListMessage{subscriptions})
 }
 
-fn update_subscription(message: HostUpdateMessage) -> Result<(), CommandError> {
+fn update_subscription(aes: &Aes, message: HostUpdateMessage) -> Result<(), CommandError> {
     if retrieve_subscription(message.channel_id).is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
-    let decoder_id = decrypt_decoder_id(message.channel_id, message.encrypted_decoder_id);
+    let decoder_id = decrypt_decoder_id(&aes, message.channel_id, message.encrypted_decoder_id);
     if decoder_id.is_err() { return Err(CommandError::DecryptError(decoder_id.unwrap_err())); }
     let decoder_id = decoder_id.unwrap();
     if !verify_decoder_id(decoder_id) { return Err(CommandError::InvalidDecoderID); }
@@ -66,7 +68,7 @@ fn update_subscription(message: HostUpdateMessage) -> Result<(), CommandError> {
     }
 }
 
-fn decode_message(message: HostDecodeMessage) -> Result<ResponseDecodeMessage, CommandError> {
+fn decode_message(aes: &Aes, message: HostDecodeMessage) -> Result<ResponseDecodeMessage, CommandError> {
     if message.timestamp <= get_timestamp() { return Err(CommandError::FramePast(message.timestamp)); }
     if message.encrypted_frame.len() < 2 { return Err(CommandError::EmptyFrameData); }
     if message.frame_length == 0 || message.frame_length > 64 { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
@@ -77,11 +79,11 @@ fn decode_message(message: HostDecodeMessage) -> Result<ResponseDecodeMessage, C
     if !subscription.valid { return Err(CommandError::NotSubscribed(message.channel_id)); }
     if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
     if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
-    let decrypted_company_stamp = decrypt_company_stamp(message.channel_id, *message.encrypted_frame.first().unwrap());
+    let decrypted_company_stamp = decrypt_company_stamp(&aes, message.channel_id, *message.encrypted_frame.first().unwrap());
     if decrypted_company_stamp.is_err() { return Err(CommandError::DecryptError(decrypted_company_stamp.unwrap_err())); }
     let decrypted_company_stamp = decrypted_company_stamp.unwrap();
     if !verify_company_stamp(decrypted_company_stamp) { return Err(CommandError::FrameCompanyStampIncorrect(decrypted_company_stamp)); }
-    let decrypted_frame = decrypt_frame(message.channel_id, message.encrypted_frame);
+    let decrypted_frame = decrypt_frame(&aes, message.channel_id, message.encrypted_frame);
     if decrypted_frame.is_err() { return Err(CommandError::DecryptError(decrypted_frame.unwrap_err())); }
     let decrypted_frame = decrypted_frame.unwrap();
     set_timestamp(message.timestamp);

@@ -10,6 +10,8 @@ pub mod packet;
 extern crate alloc;
 use alloc::vec::Vec;
 
+use hal::aes::AesBlock;
+
 use crate::sys::secure_memory::Subscription;
 
 #[derive(Debug, Clone)]
@@ -17,7 +19,7 @@ pub struct HostUpdateMessage {
     pub channel_id: u32, 
     pub end: u64,
     pub start: u64, 
-    pub encrypted_decoder_id: u128, 
+    pub encrypted_decoder_id: AesBlock, 
 }
 
 #[derive(Debug, Clone)]
@@ -25,7 +27,7 @@ pub struct HostDecodeMessage {
     pub timestamp: u64, 
     pub channel_id: u32, 
     pub frame_length: u32, 
-    pub encrypted_frame: Vec<u128>,
+    pub encrypted_frame: Vec<AesBlock>,
 }
 
 #[derive(Debug, Clone)]

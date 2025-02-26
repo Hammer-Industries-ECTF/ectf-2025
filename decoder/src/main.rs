@@ -21,7 +21,7 @@ use sys::allocator::init_heap;
 
 #[entry]
 fn main() -> ! {
-    heprintln!("Hello, World! You're semihosting!");
+    // heprintln!("Hello, World! You're semihosting!");
     init_heap();
     let p = pac::Peripherals::take().unwrap();
     // let core = pac::CorePeripherals::take().unwrap();
@@ -49,20 +49,23 @@ fn main() -> ! {
         .parity(hal::uart::ParityBit::None)
         .build();
 
+    let aes = hal::aes::Aes::new(
+        p.aes,
+        &mut gcr.reg
+    );
+
     // TODO INIT FLASH
     // TODO INIT SECRETS
     // TODO INIT SUBSCRIPTION MEMORY
-
-    // TODO INIT AES
     
     // INIT TESTING BUFFERS
 
     loop {
-        let host_message = receive_message(&uart);
+        let host_message = receive_message(&uart, &aes);
         if host_message.is_err() { todo!(); } // panic? reset?
         let host_message = host_message.unwrap();
 
-        let response_message = execute_command(host_message);
+        let response_message = execute_command(&aes, host_message);
 
         match response_message {
             Ok(response) => {
