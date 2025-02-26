@@ -3,7 +3,7 @@ pub enum PacketError {
     ZeroPaddingNotIntact(usize)
 }
 
-pub fn extract_channel_number(decoded_block: u128) -> Result<u32, PacketError> {
+pub fn extract_channel_id(decoded_block: u128) -> Result<u32, PacketError> {
     if decoded_block > 2u128.pow(32) - 1 { return Err(PacketError::ZeroPaddingNotIntact(96)); }
     Ok(decoded_block as u32)
 }

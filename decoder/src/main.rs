@@ -10,6 +10,7 @@ pub extern crate max7800x_hal as hal;
 use hal::pac;
 use hal::entry;
 
+use message::receive::receive_message;
 // use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 use cortex_m_semihosting::heprintln; // uncomment to use this for printing through semihosting
@@ -55,12 +56,11 @@ fn main() -> ! {
     // INIT TEMP BUFFERS
 
     loop {
-        // RX
+        let host_message = receive_message(&uart);
 
         // *DECRYPT
 
         // CALL FUNCTION
-        let host_message = message::HostMessage::Debug;
         let response_message = commands::message_respond(host_message);
 
         // TX
