@@ -15,8 +15,8 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
                                                for k, v in secrets_data.items()}
 
     # Secrets bounds checking
-    if len(secrets) > 10:
-        raise ValueError("Too many secret pairs generated (max 8+2)", len(secrets))
+    # if len(secrets) > 10:
+    #     raise ValueError("Too many secret pairs generated (max 8+2)", len(secrets))
     if "master" not in secrets or "0" not in secrets:
         raise ValueError("Could not find master secret pair or channel 0 secret pair")
     if any(((int(channel_num) < 0 or int(channel_num) > 2**32 - 1)

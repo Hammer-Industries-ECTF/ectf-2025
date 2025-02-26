@@ -19,7 +19,7 @@ EXPECTED_TYPE_ERRORS = {
 
 EXPECTED_VALUE_ERRORS = {
     "Found improper amount of secret pairs for channel",
-    "Too many secret pairs generated (max 8+2):",
+    # "Too many secret pairs generated (max 8+2):",
     "Could not find master secret pair or channel 0 secret pair",
     "Found invalid channel numbers in secrets",
     "Found invalid AES key: not 256 bits",

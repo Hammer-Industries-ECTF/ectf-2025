@@ -8,8 +8,8 @@ def gen_secrets(channels: list[int]) -> bytes:
         raise TypeError("channels is not a list")
     channels: set[int] = set(channels)
     channels.add(0)
-    if len(channels) > 9:
-        raise ValueError("Too many channels (max 8):", len(channels)-1)
+    # if len(channels) > 9:
+    #     raise ValueError("Too many channels (max 8):", len(channels)-1)
     if any((type(channel_id) is not int for channel_id in channels)):
         raise TypeError("Detected non-integer channel")
     if any((channel_num < 0 or channel_num > 2**32 - 1 for channel_num in channels)):

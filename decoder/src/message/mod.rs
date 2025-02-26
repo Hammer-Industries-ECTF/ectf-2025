@@ -5,6 +5,7 @@
 
 pub mod receive;
 pub mod transmit;
+pub mod packet;
 
 extern crate alloc;
 use alloc::vec::Vec;
@@ -55,3 +56,19 @@ pub enum ResponseMessage {
     Update (()),
     Decode (ResponseDecodeMessage), 
 }
+
+#[derive(Debug, Clone)]
+pub struct MessageHeader {
+    pub magic: u8,
+    pub opcode: u8,
+    pub length: u16
+}
+
+const MAGIC_BYTE: u8 = 37;
+
+const DEBUG_OPCODE: u8 = 71;
+const LIST_OPCODE: u8 = 76;
+const UPDATE_OPCODE: u8 = 83;
+const DECODE_OPCODE: u8 = 68;
+const ACK_OPCODE: u8 = 65;
+const ERR_OPCODE: u8 = 69;
