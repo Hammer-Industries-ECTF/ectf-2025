@@ -18,8 +18,8 @@ class Encoder:
                          for k, v in secrets_data.items()}
 
         # Secrets bounds checking
-        if len(self._secrets) > 10:
-            raise ValueError("Too many secret pairs generated (max 8+2):", self._secrets)
+        # if len(self._secrets) > 10:
+        #     raise ValueError("Too many secret pairs generated (max 8+2):", self._secrets)
         if "master" not in self._secrets or "0" not in self._secrets:
             raise ValueError("Could not find master secret pair or channel 0 secret pair")
         if any(((int(channel_num) < 0 or int(channel_num) > 2**32 - 1)
