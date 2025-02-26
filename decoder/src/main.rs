@@ -12,7 +12,7 @@ use hal::entry;
 
 use message::receive::receive_message;
 use message::transmit::{transmit_err, transmit_message};
-use commands::message_respond;
+use commands::execute_command;
 // use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 use cortex_m_semihosting::heprintln; // uncomment to use this for printing through semihosting
@@ -62,7 +62,7 @@ fn main() -> ! {
         if host_message.is_err() { todo!(); } // panic? reset?
         let host_message = host_message.unwrap();
 
-        let response_message = message_respond(host_message);
+        let response_message = execute_command(host_message);
 
         match response_message {
             Ok(response) => {

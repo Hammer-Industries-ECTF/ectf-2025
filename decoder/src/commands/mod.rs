@@ -27,7 +27,7 @@ pub enum CommandError {
     DecryptError(DecryptError)
 }
 
-pub fn message_respond(host_message: HostMessage) -> Result<ResponseMessage, CommandError> {
+pub fn execute_command(host_message: HostMessage) -> Result<ResponseMessage, CommandError> {
     match host_message {
         HostMessage::Debug => Ok(ResponseMessage::Debug(debug_info()?)),
         HostMessage::List => Ok(ResponseMessage::List(list_subscriptions()?)),
