@@ -72,8 +72,10 @@ fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
     let mut body_buf: [u8; 48] = [0; 48];
     transmit_ack(&uart);
     uart.read_bytes(&mut body_buf);
-    let encrypted_blocks: Vec<u128> = Vec::with_capacity(3);
-    // [u8] as Vec<u128>
+    let mut encrypted_blocks: Vec<u128> = Vec::with_capacity(3);
+    encrypted_blocks.push(u128::from_le_bytes(*body_buf[0..16].first_chunk::<16>().unwrap()));
+    encrypted_blocks.push(u128::from_le_bytes(*body_buf[16..32].first_chunk::<16>().unwrap()));
+    encrypted_blocks.push(u128::from_le_bytes(*body_buf[32..48].first_chunk::<16>().unwrap()));
     let decrypted_blocks = decrypt_message(encrypted_blocks);
     let channel_id = extract_channel_id(decrypted_blocks[0]);
     if channel_id.is_err() { return Err(RXError::PacketError(channel_id.unwrap_err())); }
@@ -83,31 +85,45 @@ fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
 }
 
 fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, header: MessageHeader) -> Result<HostDecodeMessage, RXError> {
-    let encrypted_blocks: Vec<u128> = Vec::with_capacity(6);
+    let mut encrypted_blocks: Vec<u128> = Vec::with_capacity(6);
     match header.length {
         48 => {
             let mut body_buf: [u8; 48] = [0; 48];
             transmit_ack(&uart);
             uart.read_bytes(&mut body_buf); 
-            // [u8 as Vec<u128>]
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[0..16].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[16..32].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[32..48].first_chunk::<16>().unwrap()));
         },
         64 => {
             let mut body_buf: [u8; 64] = [0; 64];
             transmit_ack(&uart);
             uart.read_bytes(&mut body_buf); 
-            // [u8 as Vec<u128>]
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[0..16].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[16..32].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[32..48].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[48..64].first_chunk::<16>().unwrap()));
         },
         80 => {
             let mut body_buf: [u8; 80] = [0; 80];
             transmit_ack(&uart);
             uart.read_bytes(&mut body_buf); 
-            // [u8 as Vec<u128>]
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[0..16].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[16..32].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[32..48].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[48..64].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[64..80].first_chunk::<16>().unwrap()));
         },
         96 => {
             let mut body_buf: [u8; 96] = [0; 96];
             transmit_ack(&uart);
             uart.read_bytes(&mut body_buf); 
-            // [u8 as Vec<u128>]
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[0..16].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[16..32].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[32..48].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[48..64].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[64..80].first_chunk::<16>().unwrap()));
+            encrypted_blocks.push(u128::from_le_bytes(*body_buf[80..96].first_chunk::<16>().unwrap()));
         },
         other => { return Err(RXError::InvalidLength(other)); }
     }

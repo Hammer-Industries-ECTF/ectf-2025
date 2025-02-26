@@ -11,6 +11,8 @@ use hal::pac;
 use hal::entry;
 
 use message::receive::receive_message;
+use message::transmit::{transmit_err, transmit_message};
+use commands::message_respond;
 // use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
 use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
 use cortex_m_semihosting::heprintln; // uncomment to use this for printing through semihosting
@@ -22,7 +24,7 @@ fn main() -> ! {
     heprintln!("Hello, World! You're semihosting!");
     init_heap();
     let p = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
+    // let core = pac::CorePeripherals::take().unwrap();
 
     let mut gcr = hal::gcr::Gcr::new(p.gcr, p.lpgcr);
     let ipo = hal::gcr::clocks::Ipo::new(gcr.osc_guards.ipo).enable(&mut gcr.reg);
@@ -53,19 +55,24 @@ fn main() -> ! {
 
     // TODO INIT AES
     
-    // INIT TEMP BUFFERS
+    // INIT TESTING BUFFERS
 
     loop {
         let host_message = receive_message(&uart);
+        if host_message.is_err() { todo!(); } // panic? reset?
+        let host_message = host_message.unwrap();
 
-        // *DECRYPT
+        let response_message = message_respond(host_message);
 
-        // CALL FUNCTION
-        let response_message = commands::message_respond(host_message);
-
-        // TX
+        match response_message {
+            Ok(response) => {
+                let transmit = transmit_message(&uart, response);
+                if transmit.is_err() { todo!(); } // panic? reset?
+            },
+            Err(error) => {
+                let transmit = transmit_err(&uart, error);
+                if transmit.is_err() { todo!(); } // panic? reset?
+            }
+        }
     }
-
-    todo!();
-
 }

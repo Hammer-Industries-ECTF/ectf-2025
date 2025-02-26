@@ -3,12 +3,11 @@ use crate::message::{HostUpdateMessage, HostDecodeMessage};
 use crate::message::{ResponseDebugMessage, ResponseListMessage, ResponseDecodeMessage};
 
 use crate::message::packet::verify_company_stamp;
-use crate::message::packet::PacketError;
 
 use crate::sys::secure_memory::{overwrite_subscription, retrieve_subscription, retrieve_subscriptions, verify_decoder_id};
 use crate::sys::secure_memory::{Subscription, SecureMemoryError};
 
-use crate::sys::decrypt::{decrypt_company_stamp, decrypt_decoder_id, decrypt_frame};
+use crate::sys::decrypt::{decrypt_company_stamp, decrypt_decoder_id, decrypt_frame, DecryptError};
 
 use crate::utils::timestamp::{get_timestamp, set_timestamp};
 
@@ -25,7 +24,7 @@ pub enum CommandError {
     FrameCompanyStampIncorrect(u128),
     EmptyFrameData,
     SecureMemoryError(SecureMemoryError),
-    PacketError(PacketError)
+    DecryptError(DecryptError)
 }
 
 pub fn message_respond(host_message: HostMessage) -> Result<ResponseMessage, CommandError> {
@@ -52,7 +51,7 @@ fn list_subscriptions() -> Result<ResponseListMessage, CommandError> {
 fn update_subscription(message: HostUpdateMessage) -> Result<(), CommandError> {
     if retrieve_subscription(message.channel_id).is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
     let decoder_id = decrypt_decoder_id(message.channel_id, message.encrypted_decoder_id);
-    if decoder_id.is_err() { return Err(CommandError::PacketError(decoder_id.unwrap_err())); }
+    if decoder_id.is_err() { return Err(CommandError::DecryptError(decoder_id.unwrap_err())); }
     let decoder_id = decoder_id.unwrap();
     if !verify_decoder_id(decoder_id) { return Err(CommandError::InvalidDecoderID); }
     let subscription = Subscription {
@@ -79,8 +78,12 @@ fn decode_message(message: HostDecodeMessage) -> Result<ResponseDecodeMessage, C
     if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
     if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
     let decrypted_company_stamp = decrypt_company_stamp(message.channel_id, *message.encrypted_frame.first().unwrap());
+    if decrypted_company_stamp.is_err() { return Err(CommandError::DecryptError(decrypted_company_stamp.unwrap_err())); }
+    let decrypted_company_stamp = decrypted_company_stamp.unwrap();
     if !verify_company_stamp(decrypted_company_stamp) { return Err(CommandError::FrameCompanyStampIncorrect(decrypted_company_stamp)); }
     let decrypted_frame = decrypt_frame(message.channel_id, message.encrypted_frame);
+    if decrypted_frame.is_err() { return Err(CommandError::DecryptError(decrypted_frame.unwrap_err())); }
+    let decrypted_frame = decrypted_frame.unwrap();
     set_timestamp(message.timestamp);
     Ok(ResponseDecodeMessage{frame: decrypted_frame})
 }

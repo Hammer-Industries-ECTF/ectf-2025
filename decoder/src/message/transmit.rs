@@ -52,7 +52,7 @@ pub fn transmit_ack(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, 
     uart.write_bytes(&header_bytes);
 }
 
-pub fn transmit_err<T>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, error: T) -> Result<(), TXError> {
+pub fn transmit_err<T>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, _error: T) -> Result<(), TXError> {
     let error_name = type_name::<T>();
     let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: ERR_OPCODE, length: error_name.len() as u16 };
     transmit_header(&uart, message_header);
@@ -70,7 +70,7 @@ fn transmit_header(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, A
     uart.write_bytes(&header_bytes);
 }
 
-fn transmit_debug_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, message: ResponseDebugMessage) -> Result<(), TXError> {
+fn transmit_debug_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, _message: ResponseDebugMessage) -> Result<(), TXError> {
     uart.write_bytes(b"Debug");
     Ok(())
 }
