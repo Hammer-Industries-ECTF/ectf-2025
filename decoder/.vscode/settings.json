@@ -5,5 +5,6 @@
         "thumbv7em-none-eabihf"
     ],
     "target":"MAX78000",
-    "board":"FTHR_RevA"
+    "board": "FTHR_RevA",
+    "cortex-debug.variableUseNaturalFormat": false
 }

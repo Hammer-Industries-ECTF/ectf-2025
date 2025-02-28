@@ -20,29 +20,29 @@ pub fn transmit_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0,
     match message {
         ResponseMessage::Debug(debug_response) => {
             let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: DEBUG_OPCODE, length: 5 };
-            transmit_header(&uart, message_header);
-            transmit_debug_body(&uart, debug_response)
+            transmit_header(uart, message_header);
+            transmit_debug_body(uart, debug_response)
         }
         ResponseMessage::List(list_response) => {
             let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: LIST_OPCODE, length: 4+(list_response.subscriptions.len()*20) as u16 };
-            transmit_header(&uart, message_header);
-            let ack = receive_ack(&uart);
+            transmit_header(uart, message_header);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
-            transmit_list_body(&uart, list_response)
+            transmit_list_body(uart, list_response)
         }
         ResponseMessage::Update(()) => {
             let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: UPDATE_OPCODE, length: 0 };
-            transmit_header(&uart, message_header);
-            let ack = receive_ack(&uart);
+            transmit_header(uart, message_header);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         }
         ResponseMessage::Decode(decode_response) => {
             let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: DECODE_OPCODE, length: decode_response.frame.len() as u16 };
-            transmit_header(&uart, message_header);
-            let ack = receive_ack(&uart);
+            transmit_header(uart, message_header);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
-            transmit_decode_body(&uart, decode_response)
+            transmit_decode_body(uart, decode_response)
         }
     }
 }
@@ -55,12 +55,12 @@ pub fn transmit_ack(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, 
 pub fn transmit_err<T>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, _error: T) -> Result<(), TXError> {
     let error_name = type_name::<T>();
     let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: ERR_OPCODE, length: error_name.len() as u16 };
-    transmit_header(&uart, message_header);
-    let ack = receive_ack(&uart);
+    transmit_header(uart, message_header);
+    let ack = receive_ack(uart);
     if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
     let error_bytes = error_name.as_bytes();
     uart.write_bytes(error_bytes);
-    let ack = receive_ack(&uart);
+    let ack = receive_ack(uart);
     if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
     Ok(())
 }
@@ -80,7 +80,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
         0 => {
             let list_bytes: [u8; 4] = [0; 4];
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -113,7 +113,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -146,7 +146,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -179,7 +179,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -212,7 +212,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -245,7 +245,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -278,7 +278,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -311,7 +311,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -344,7 +344,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
                 list_bytes[23+i*20] = end_bytes[7];
             }
             uart.write_bytes(&list_bytes);
-            let ack = receive_ack(&uart);
+            let ack = receive_ack(uart);
             if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
             Ok(())
         },
@@ -354,7 +354,7 @@ fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1
 
 fn transmit_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, message: ResponseDecodeMessage) -> Result<(), TXError> {
     uart.write_bytes(message.frame.as_slice());
-    let ack = receive_ack(&uart);
+    let ack = receive_ack(uart);
     if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
     Ok(())
 }

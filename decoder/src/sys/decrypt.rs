@@ -24,14 +24,14 @@ pub enum DecryptError {
 
 pub fn decrypt_message(aes: &Aes, message: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
     let secret = retrieve_master_secret();
-    decrypt_blocks(&aes, &secret, message)
+    decrypt_blocks(aes, secret, message)
 }
 
 pub fn decrypt_decoder_id(aes: &Aes, channel_id: u32, block: AesBlock) -> Result<u32, DecryptError> {
     let secret = retrieve_channel_secret(channel_id);
     if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
-    let decoded_block = decrypt_block(&aes, &secret, block)?;
+    let decoded_block = decrypt_block(aes, secret, block)?;
     let decoder_id = extract_decoder_id(
 (decoded_block[0] as u128) |
             ((decoded_block[1] as u128) << 32) |
@@ -46,7 +46,7 @@ pub fn decrypt_company_stamp(aes: &Aes, channel_id: u32, block: AesBlock) -> Res
     let secret = retrieve_channel_secret(channel_id);
     if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
-    match decrypt_block(&aes, &secret, block) {
+    match decrypt_block(aes, secret, block) {
         Ok(block) => { Ok(
             (block[0] as u128) |
             ((block[1] as u128) << 32) |
@@ -61,36 +61,36 @@ pub fn decrypt_frame(aes: &Aes, channel_id: u32, blocks: Vec<AesBlock>) -> Resul
     let secret = retrieve_channel_secret(channel_id);
     if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
-    let mut decrypted_blocks = decrypt_blocks(&aes, &secret, blocks)?;
+    let mut decrypted_blocks = decrypt_blocks(aes, secret, blocks)?;
     decrypted_blocks.remove(0);
     let decrypted_blocks: Vec<u8> = decrypted_blocks.iter().flat_map(|x| x.iter().flat_map(|y| y.to_le_bytes())).collect();
     Ok(decrypted_blocks)
 }
 
 fn decrypt_blocks(aes: &Aes, secret: &Secret, blocks: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
-    let mut decrypted_blocks: Vec<AesBlock> = Vec::with_capacity(blocks.len());
     aes.set_key(&secret.aes_key);
+    let mut decrypted_blocks: Vec<AesBlock> = Vec::with_capacity(blocks.len());
     let mut cbc= secret.aes_iv;
     for block in blocks {
-        let cbc_intermediate: Vec<u32> = zip(block, cbc).map(|(x, y)| x ^ y).collect();
-        let mut aes_in: AesBlock = [0; 4];
-        aes_in.copy_from_slice(cbc_intermediate.as_slice());
-        let aes_out = aes.decrypt_block(aes_in);
+        let aes_out = aes.decrypt_block(block);
         if aes_out.is_err() { return Err(DecryptError::AesError(aes_out.unwrap_err())); }
         let aes_out = aes_out.unwrap();
+        let cbc_intermediate: Vec<u32> = zip(aes_out, cbc).map(|(x, y)| x ^ y).collect();
+        let mut aes_out: AesBlock = [0; 4];
+        aes_out.copy_from_slice(cbc_intermediate.as_slice());
         decrypted_blocks.push(aes_out);
-        cbc = aes_out;
+        cbc = block;
     }
     Ok(decrypted_blocks)
 }
 
 fn decrypt_block(aes: &Aes, secret: &Secret, block: AesBlock) -> Result<AesBlock, DecryptError> {
     aes.set_key(&secret.aes_key);
-    let cbc_intermediate: Vec<u32> = zip(block, secret.aes_iv).map(|(x, y)| x ^ y).collect();
-    let mut aes_in: AesBlock = [0; 4];
-    aes_in.copy_from_slice(cbc_intermediate.as_slice());
-    match aes.decrypt_block(aes_in) {
-        Ok(block) => Ok(block),
-        Err(err) => Err(DecryptError::AesError(err))
-    }
+    let aes_out = aes.decrypt_block(block);
+    if aes_out.is_err() { return Err(DecryptError::AesError(aes_out.unwrap_err())); }
+    let aes_out = aes_out.unwrap();
+    let cbc_intermediate: Vec<u32> = zip(aes_out, secret.aes_iv).map(|(x, y)| x ^ y).collect();
+    let mut aes_out: AesBlock = [0; 4];
+    aes_out.copy_from_slice(cbc_intermediate.as_slice());
+    Ok(aes_out)
 }

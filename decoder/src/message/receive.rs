@@ -30,21 +30,21 @@ pub enum RXError {
 }
 
 pub fn receive_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes) -> Result<HostMessage, RXError> {
-    let message_header = receive_header(&uart);
+    let message_header = receive_header(uart);
     if message_header.magic != MAGIC_BYTE { return Err(RXError::IncorrectMagic(message_header.magic)); }
     match message_header.opcode {
         DEBUG_OPCODE => {
             if message_header.length != 0 { return Err(RXError::InvalidLength(message_header.length)); }
-            transmit_ack(&uart);
+            transmit_ack(uart);
             Ok(HostMessage::Debug)
         },
         LIST_OPCODE => {
             if message_header.length != 0 { return Err(RXError::InvalidLength(message_header.length)); }
-            transmit_ack(&uart);
+            transmit_ack(uart);
             Ok(HostMessage::List)
         },
-        UPDATE_OPCODE => { Ok(HostMessage::Update(receive_update_body(&uart, &aes, message_header)?)) },
-        DECODE_OPCODE => { Ok(HostMessage::Decode(receive_decode_body(&uart, &aes, message_header)?)) },
+        UPDATE_OPCODE => { Ok(HostMessage::Update(receive_update_body(uart, aes, message_header)?)) },
+        DECODE_OPCODE => { Ok(HostMessage::Decode(receive_decode_body(uart, aes, message_header)?)) },
         ACK_OPCODE => { Err(RXError::UnexpectedACK) },
         ERR_OPCODE => { Err(RXError::UnexpectedERR) },
         other => { Err(RXError::InvalidOpcode(other)) }
@@ -74,7 +74,7 @@ fn receive_header(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af
 fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostUpdateMessage, RXError> {
     if header.length != 48 { return Err(RXError::InvalidLength(header.length)); }
     let mut body_buf: [u8; 48] = [0; 48];
-    transmit_ack(&uart);
+    transmit_ack(uart);
     uart.read_bytes(&mut body_buf);
     let mut encrypted_blocks: Vec<AesBlock> = Vec::with_capacity(12);
     encrypted_blocks.push([
@@ -95,7 +95,7 @@ fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         u32::from_le_bytes(*body_buf[40..44].first_chunk::<4>().unwrap()),
         u32::from_le_bytes(*body_buf[44..48].first_chunk::<4>().unwrap())
     ]);
-    let decrypted_blocks = decrypt_message(&aes, encrypted_blocks);
+    let decrypted_blocks = decrypt_message(aes, encrypted_blocks);
     if decrypted_blocks.is_err() { return Err(RXError::DecryptError(decrypted_blocks.unwrap_err())); }
     let decrypted_blocks = decrypted_blocks.unwrap();
     let channel_id = extract_channel_id(
@@ -120,7 +120,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
     match header.length {
         48 => {
             let mut body_buf: [u8; 48] = [0; 48];
-            transmit_ack(&uart);
+            transmit_ack(uart);
             uart.read_bytes(&mut body_buf); 
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
@@ -143,7 +143,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         },
         64 => {
             let mut body_buf: [u8; 64] = [0; 64];
-            transmit_ack(&uart);
+            transmit_ack(uart);
             uart.read_bytes(&mut body_buf); 
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
@@ -172,7 +172,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         },
         80 => {
             let mut body_buf: [u8; 80] = [0; 80];
-            transmit_ack(&uart);
+            transmit_ack(uart);
             uart.read_bytes(&mut body_buf); 
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
@@ -207,7 +207,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         },
         96 => {
             let mut body_buf: [u8; 96] = [0; 96];
-            transmit_ack(&uart);
+            transmit_ack(uart);
             uart.read_bytes(&mut body_buf); 
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
@@ -248,7 +248,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         },
         other => { return Err(RXError::InvalidLength(other)); }
     }
-    let decrypted_blocks = decrypt_message(&aes, encrypted_blocks);
+    let decrypted_blocks = decrypt_message(aes, encrypted_blocks);
     if decrypted_blocks.is_err() { return Err(RXError::DecryptError(decrypted_blocks.unwrap_err())); }
     let mut decrypted_blocks = decrypted_blocks.unwrap();
     let (timestamp, channel_id, frame_length) = extract_frame_metadata(

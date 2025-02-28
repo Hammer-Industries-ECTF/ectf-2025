@@ -66,11 +66,11 @@ pub struct MessageHeader {
     pub length: u16
 }
 
-const MAGIC_BYTE: u8 = 37;
+const MAGIC_BYTE: u8 = 0x25;
 
-const DEBUG_OPCODE: u8 = 71;
-const LIST_OPCODE: u8 = 76;
-const UPDATE_OPCODE: u8 = 83;
-const DECODE_OPCODE: u8 = 68;
-const ACK_OPCODE: u8 = 65;
-const ERR_OPCODE: u8 = 69;
+const DEBUG_OPCODE: u8 = 0x47;
+const LIST_OPCODE: u8 = 0x4C;
+const UPDATE_OPCODE: u8 = 0x53;
+const DECODE_OPCODE: u8 = 0x44;
+const ACK_OPCODE: u8 = 0x41;
+const ERR_OPCODE: u8 = 0x45;

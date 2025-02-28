@@ -60,6 +60,18 @@ fn main() -> ! {
     
     // INIT TESTING BUFFERS
 
+    aes.set_key(&[
+        0,0,0,0,
+        0,0,0,0
+    ]);
+    let test_output = aes.decrypt_block([
+        1554482236,
+        1565306268,
+        2287194645,
+        1395218143
+    ]);
+    let test_output = test_output.unwrap();
+
     loop {
         let host_message = receive_message(&uart, &aes);
         if host_message.is_err() { todo!(); } // panic? reset?
