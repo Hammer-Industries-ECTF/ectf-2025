@@ -4,8 +4,8 @@ use core::any::type_name;
 
 use hal::{gpio::{Af1, Pin}, pac::Uart0, uart::BuiltUartPeripheral};
 
-use super::{MessageHeader, ResponseDebugMessage, ResponseListMessage, ResponseDecodeMessage, ResponseMessage};
-use super::{MAGIC_BYTE, DEBUG_OPCODE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, ACK_OPCODE, ERR_OPCODE};
+use super::{MessageHeader, ResponseListMessage, ResponseDecodeMessage, ResponseMessage};
+use super::{MAGIC_BYTE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, ACK_OPCODE, ERR_OPCODE};
 
 use super::receive::RXError;
 use super::receive::receive_ack;
@@ -18,11 +18,6 @@ pub enum TXError {
 
 pub fn transmit_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, message: ResponseMessage) -> Result<(), TXError> {
     match message {
-        ResponseMessage::Debug(debug_response) => {
-            let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: DEBUG_OPCODE, length: 5 };
-            transmit_header(uart, message_header);
-            transmit_debug_body(uart, debug_response)
-        }
         ResponseMessage::List(list_response) => {
             let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: LIST_OPCODE, length: 4+(list_response.subscriptions.len()*20) as u16 };
             transmit_header(uart, message_header);
@@ -68,11 +63,6 @@ pub fn transmit_err<T>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
 fn transmit_header(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, header: MessageHeader) -> () {
     let header_bytes: [u8; 4] = [header.magic, header.opcode, header.length as u8, (header.length >> 8) as u8];
     uart.write_bytes(&header_bytes);
-}
-
-fn transmit_debug_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, _message: ResponseDebugMessage) -> Result<(), TXError> {
-    uart.write_bytes(b"Debug");
-    Ok(())
 }
 
 fn transmit_list_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, message: ResponseListMessage) -> Result<(), TXError> {

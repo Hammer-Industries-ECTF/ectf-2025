@@ -32,14 +32,10 @@ pub struct HostDecodeMessage {
 
 #[derive(Debug, Clone)]
 pub enum HostMessage {
-    Debug,
     List,
     Update (HostUpdateMessage),
     Decode (HostDecodeMessage), 
 }
-
-#[derive(Debug, Clone)]
-pub struct ResponseDebugMessage {}
 
 #[derive(Debug, Clone)]
 pub struct ResponseListMessage {
@@ -53,7 +49,6 @@ pub struct ResponseDecodeMessage {
 
 #[derive(Debug, Clone)]
 pub enum ResponseMessage {
-    Debug  (ResponseDebugMessage),
     List   (ResponseListMessage),
     Update (()),
     Decode (ResponseDecodeMessage), 

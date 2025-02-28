@@ -11,7 +11,7 @@ use crate::sys::decrypt::DecryptError;
 use crate::sys::decrypt::decrypt_message;
 
 use super::{HostDecodeMessage, HostMessage, HostUpdateMessage, MessageHeader};
-use super::{MAGIC_BYTE, DEBUG_OPCODE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, ACK_OPCODE, ERR_OPCODE};
+use super::{MAGIC_BYTE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, ACK_OPCODE, ERR_OPCODE};
 
 use super::packet::PacketError;
 use super::packet::{extract_channel_id, extract_timestamps, extract_frame_metadata};
@@ -33,11 +33,6 @@ pub fn receive_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
     let message_header = receive_header(uart);
     if message_header.magic != MAGIC_BYTE { return Err(RXError::IncorrectMagic(message_header.magic)); }
     match message_header.opcode {
-        DEBUG_OPCODE => {
-            if message_header.length != 0 { return Err(RXError::InvalidLength(message_header.length)); }
-            transmit_ack(uart);
-            Ok(HostMessage::Debug)
-        },
         LIST_OPCODE => {
             if message_header.length != 0 { return Err(RXError::InvalidLength(message_header.length)); }
             transmit_ack(uart);
@@ -112,6 +107,7 @@ fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
             ((decrypted_blocks[1][2] as u128) << 64) |
             ((decrypted_blocks[1][3] as u128) << 96)
     );
+    transmit_ack(uart);
     Ok(HostUpdateMessage{ channel_id, end, start, encrypted_decoder_id: decrypted_blocks[2] })
 }
 
@@ -121,7 +117,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         48 => {
             let mut body_buf: [u8; 48] = [0; 48];
             transmit_ack(uart);
-            uart.read_bytes(&mut body_buf); 
+            uart.read_bytes(&mut body_buf);
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
                 u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
@@ -144,7 +140,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         64 => {
             let mut body_buf: [u8; 64] = [0; 64];
             transmit_ack(uart);
-            uart.read_bytes(&mut body_buf); 
+            uart.read_bytes(&mut body_buf);
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
                 u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
@@ -173,7 +169,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         80 => {
             let mut body_buf: [u8; 80] = [0; 80];
             transmit_ack(uart);
-            uart.read_bytes(&mut body_buf); 
+            uart.read_bytes(&mut body_buf);
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
                 u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
@@ -208,7 +204,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         96 => {
             let mut body_buf: [u8; 96] = [0; 96];
             transmit_ack(uart);
-            uart.read_bytes(&mut body_buf); 
+            uart.read_bytes(&mut body_buf);
             encrypted_blocks.push([
                 u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
                 u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
@@ -258,5 +254,6 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
             ((decrypted_blocks[0][3] as u128) << 96)
     );
     decrypted_blocks.remove(0);
+    transmit_ack(uart);
     Ok(HostDecodeMessage{ timestamp, channel_id, frame_length, encrypted_frame: decrypted_blocks })
 }

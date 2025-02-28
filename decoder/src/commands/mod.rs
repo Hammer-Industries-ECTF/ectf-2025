@@ -1,6 +1,6 @@
 use crate::message::{HostMessage, ResponseMessage};
 use crate::message::{HostUpdateMessage, HostDecodeMessage};
-use crate::message::{ResponseDebugMessage, ResponseListMessage, ResponseDecodeMessage};
+use crate::message::{ResponseListMessage, ResponseDecodeMessage};
 
 use hal::aes::Aes;
 
@@ -31,17 +31,10 @@ pub enum CommandError {
 
 pub fn execute_command(aes: &Aes, host_message: HostMessage) -> Result<ResponseMessage, CommandError> {
     match host_message {
-        HostMessage::Debug => Ok(ResponseMessage::Debug(debug_info()?)),
         HostMessage::List => Ok(ResponseMessage::List(list_subscriptions()?)),
         HostMessage::Update(host_update_message) => Ok(ResponseMessage::Update(update_subscription(aes, host_update_message)?)),
         HostMessage::Decode(host_decode_message) => Ok(ResponseMessage::Decode(decode_message(aes, host_decode_message)?))
     }
-}
-
-fn debug_info() -> Result<ResponseDebugMessage, CommandError> {
-    // idk man
-    Ok(ResponseDebugMessage{})
-    // Err(CommandError::DebugRequested)
 }
 
 fn list_subscriptions() -> Result<ResponseListMessage, CommandError> {

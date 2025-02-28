@@ -72,9 +72,13 @@ fn main() -> ! {
     ]);
     let test_output = test_output.unwrap();
 
-    loop {
+    'message_loop: loop {
         let host_message = receive_message(&uart, &aes);
-        if host_message.is_err() { todo!(); } // panic? reset?
+        if host_message.is_err() {
+            let transmit = transmit_err(&uart, host_message.unwrap_err());
+            if transmit.is_err() { todo!(); } // panic? reset?
+            continue 'message_loop;
+        }
         let host_message = host_message.unwrap();
 
         let response_message = execute_command(&aes, host_message);
