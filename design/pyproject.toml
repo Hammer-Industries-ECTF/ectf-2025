@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ectf25_design"
-version = "1.0.0a3"
+version = "1.0.0a4"
 description = "Hammer Industries' (Purdue2) encoder design for the MITRE eCTF 2025."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,9 @@ authors = [
 ]
 keywords = ["mitre", "ectf", "embedded", "security", "encoder", "aes", "purdue"]
 dependencies = ["pycryptodome>=3.21"]
-optional-dependencies = ["pythonfuzz"]
+
+[project.optional-dependencies]
+tests = ["pythonfuzz"]
 
 [tool.setuptools.packages.find]
 exclude = ["tests*"]

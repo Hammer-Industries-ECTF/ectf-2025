@@ -11,7 +11,7 @@ use crate::sys::decrypt::DecryptError;
 use crate::sys::decrypt::decrypt_message;
 
 use super::{HostDecodeMessage, HostMessage, HostUpdateMessage, MessageHeader};
-use super::{MAGIC_BYTE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, ACK_OPCODE, ERR_OPCODE};
+use super::{MAGIC_BYTE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, DEBUG_OPCODE, ACK_OPCODE, ERR_OPCODE};
 
 use super::packet::PacketError;
 use super::packet::{extract_channel_id, extract_timestamps, extract_frame_metadata};
@@ -23,6 +23,7 @@ pub enum RXError {
     IncorrectMagic(u8),
     InvalidOpcode(u8),
     InvalidLength(u16),
+    UnexpectedDebug,
     UnexpectedACK,
     UnexpectedERR,
     PacketError(PacketError),
@@ -40,6 +41,7 @@ pub fn receive_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         },
         UPDATE_OPCODE => { Ok(HostMessage::Update(receive_update_body(uart, aes, message_header)?)) },
         DECODE_OPCODE => { Ok(HostMessage::Decode(receive_decode_body(uart, aes, message_header)?)) },
+        DEBUG_OPCODE => { Err(RXError::UnexpectedDebug) },
         ACK_OPCODE => { Err(RXError::UnexpectedACK) },
         ERR_OPCODE => { Err(RXError::UnexpectedERR) },
         other => { Err(RXError::InvalidOpcode(other)) }

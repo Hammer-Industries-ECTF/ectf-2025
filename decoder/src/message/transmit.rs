@@ -1,6 +1,9 @@
 //! Transmitter Functions
 
-use core::any::type_name;
+use core::fmt::write;
+
+extern crate alloc;
+use alloc::string::String;
 
 use hal::{gpio::{Af1, Pin}, pac::Uart0, uart::BuiltUartPeripheral};
 
@@ -47,13 +50,14 @@ pub fn transmit_ack(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, 
     uart.write_bytes(&header_bytes);
 }
 
-pub fn transmit_err<T>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, _error: T) -> Result<(), TXError> {
-    let error_name = type_name::<T>();
-    let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: ERR_OPCODE, length: error_name.len() as u16 };
+pub fn transmit_err<T: core::fmt::Debug>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, error: T) -> Result<(), TXError> {
+    let mut error_body = String::new();
+    write(&mut error_body, format_args!("{:?}", error));
+    let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: ERR_OPCODE, length: error_body.len() as u16 };
     transmit_header(uart, message_header);
     let ack = receive_ack(uart);
     if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }
-    let error_bytes = error_name.as_bytes();
+    let error_bytes = error_body.as_bytes();
     uart.write_bytes(error_bytes);
     let ack = receive_ack(uart);
     if ack.is_err() { return Err(TXError::RXError(ack.unwrap_err())); }

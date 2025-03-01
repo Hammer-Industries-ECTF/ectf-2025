@@ -15,7 +15,6 @@ use crate::utils::timestamp::{get_timestamp, set_timestamp};
 
 #[derive(Debug, Clone)]
 pub enum CommandError {
-    DebugRequested,
     InvalidSubscriptionChannel(u32),
     NotSubscribed(u32),
     SubscriptionFuture(u32, u64),
