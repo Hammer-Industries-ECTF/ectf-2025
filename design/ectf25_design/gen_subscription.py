@@ -17,8 +17,6 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
                                                for k, v in secrets_data.items()}
 
     # Secrets bounds checking
-    # if len(secrets) > 10:
-    #     raise ValueError("Too many secret pairs generated (max 8+2)", len(secrets))
     if "master" not in secrets or "0" not in secrets:
         raise ValueError("Could not find master secret pair or channel 0 secret pair")
     if any(((int(channel_num) < 0 or int(channel_num) > 2**32 - 1)
@@ -55,11 +53,11 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
     channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
                                           AES.MODE_CBC,
                                           iv=secrets[str(channel)][1])
-    encoded_device_id: bytes = channel_cipher.encrypt(device_id.to_bytes(16, 'little'))
+    encoded_device_id: bytes = channel_cipher.decrypt(device_id.to_bytes(16, 'little'))
     master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
                                          AES.MODE_CBC,
                                          iv=secrets["master"][1])
-    encoded_update: bytes = master_cipher.encrypt(channel.to_bytes(16, 'little')
+    encoded_update: bytes = master_cipher.decrypt(channel.to_bytes(16, 'little')
                                                   + end.to_bytes(8, 'little')
                                                   + start.to_bytes(8, 'little')
                                                   + encoded_device_id)
@@ -110,7 +108,11 @@ def parse_args():
 
 def main():
     args = parse_args()
-    subscription = gen_subscription(args.secrets_file.read(), args.device_id, args.start, args.end, args.channel)
+    subscription = gen_subscription(args.secrets_file.read(),
+                                    args.device_id,
+                                    args.start,
+                                    args.end,
+                                    args.channel)
     with open(args.subscription_file, "wb" if args.force else "xb") as f:
         f.write(subscription)
 

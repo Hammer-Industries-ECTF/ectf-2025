@@ -18,7 +18,6 @@ INIT_EXPECTED_TYPE_ERRORS = {
 
 INIT_EXPECTED_VALUE_ERRORS = {
     "Found improper amount of secret pairs for channel",
-    # "Too many secret pairs generated (max 8+2):",
     "Could not find master secret pair or channel 0 secret pair",
     "Found invalid channel numbers in secrets",
     "Found invalid AES key: not 256 bits",
@@ -68,7 +67,7 @@ def output_verifier(encode_output: bytes,
     master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
                                          AES.MODE_CBC,
                                          iv=secrets["master"][1])
-    decoded_frame: bytes = master_cipher.decrypt(encode_output)
+    decoded_frame: bytes = master_cipher.encrypt(encode_output)
     timestamp: int = int.from_bytes(decoded_frame[0:8], 'little')
     channel: int = int.from_bytes(decoded_frame[8:12], 'little')
     frame_length: int = int.from_bytes(decoded_frame[12:16], 'little')
@@ -80,7 +79,7 @@ def output_verifier(encode_output: bytes,
     channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
                                           AES.MODE_CBC,
                                           iv=secrets[str(channel)][1])
-    frame_package: bytes = channel_cipher.decrypt(decoded_frame[16:])
+    frame_package: bytes = channel_cipher.encrypt(decoded_frame[16:])
     company_stamp = frame_package[0:16]
     frame_data = frame_package[16:16+frame_length]
 

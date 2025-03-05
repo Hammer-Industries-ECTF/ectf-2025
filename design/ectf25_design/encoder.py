@@ -19,8 +19,6 @@ class Encoder:
                          for k, v in secrets_data.items()}
 
         # Secrets bounds checking
-        # if len(self._secrets) > 10:
-        #     raise ValueError("Too many secret pairs generated (max 8+2):", self._secrets)
         if "master" not in self._secrets or "0" not in self._secrets:
             raise ValueError("Could not find master secret pair or channel 0 secret pair")
         if any(((int(channel_num) < 0 or int(channel_num) > 2**32 - 1)
@@ -55,13 +53,13 @@ class Encoder:
         channel_cipher: AES.CbcMode = AES.new(self._secrets[str(channel)][0],
                                               AES.MODE_CBC,
                                               iv=self._secrets[str(channel)][1])
-        encoded_data: bytes = channel_cipher.encrypt(self._company_stamp
+        encoded_data: bytes = channel_cipher.decrypt(self._company_stamp
                                                      + frame
                                                      + (b'\x00' * pad_bytes_needed))
         master_cipher: AES.CbcMode = AES.new(self._secrets["master"][0],
                                              AES.MODE_CBC,
                                              iv=self._secrets["master"][1])
-        encoded_frame: bytes = master_cipher.encrypt(timestamp.to_bytes(8, 'little')
+        encoded_frame: bytes = master_cipher.decrypt(timestamp.to_bytes(8, 'little')
                                                      + channel.to_bytes(4, 'little')
                                                      + len(frame).to_bytes(4, 'little')
                                                      + encoded_data)

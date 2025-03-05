@@ -19,7 +19,6 @@ EXPECTED_TYPE_ERRORS = {
 
 EXPECTED_VALUE_ERRORS = {
     "Found improper amount of secret pairs for channel",
-    # "Too many secret pairs generated (max 8+2):",
     "Could not find master secret pair or channel 0 secret pair",
     "Found invalid channel numbers in secrets",
     "Found invalid AES key: not 256 bits",
@@ -65,7 +64,7 @@ def output_verifier(gen_subscription_output: bytes,
     master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
                                          AES.MODE_CBC,
                                          iv=secrets["master"][1])
-    decoded_update: bytes = master_cipher.decrypt(gen_subscription_output)
+    decoded_update: bytes = master_cipher.encrypt(gen_subscription_output)
     channel: int = int.from_bytes(decoded_update[0:16], 'little')
     end: int = int.from_bytes(decoded_update[16:24], 'little')
     start: int = int.from_bytes(decoded_update[24:32], 'little')
@@ -79,7 +78,7 @@ def output_verifier(gen_subscription_output: bytes,
     channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
                                           AES.MODE_CBC,
                                           iv=secrets[str(channel)][1])
-    device_id: bytes = channel_cipher.decrypt(encoded_device_id)
+    device_id: bytes = channel_cipher.encrypt(encoded_device_id)
     device_id: int = int.from_bytes(device_id, 'little')
 
     assert device_id == expected_device_id, "Decoded wrong device_id"
