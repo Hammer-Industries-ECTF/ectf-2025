@@ -61,10 +61,9 @@ def output_verifier(gen_subscription_output: bytes,
                                                for k, v in secrets_data.items()}
 
     # Decrypt package master layer
-    master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
-                                         AES.MODE_CBC,
-                                         iv=secrets["master"][1])
-    decoded_update: bytes = master_cipher.encrypt(gen_subscription_output)
+    decoded_update: bytes = anti_cbc_decrypt(secrets["master"][0],
+                                             secrets["master"][1],
+                                             gen_subscription_output)
     channel: int = int.from_bytes(decoded_update[0:16], 'little')
     end: int = int.from_bytes(decoded_update[16:24], 'little')
     start: int = int.from_bytes(decoded_update[24:32], 'little')
@@ -75,13 +74,40 @@ def output_verifier(gen_subscription_output: bytes,
     assert start == expected_start, "Decoded wrong start"
 
     # Decrypt package channel layer
-    channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
-                                          AES.MODE_CBC,
-                                          iv=secrets[str(channel)][1])
-    device_id: bytes = channel_cipher.encrypt(encoded_device_id)
+    device_id: bytes = anti_cbc_decrypt(secrets[str(channel)][0],
+                                        secrets[str(channel)][1],
+                                        encoded_device_id)
     device_id: int = int.from_bytes(device_id, 'little')
 
     assert device_id == expected_device_id, "Decoded wrong device_id"
+
+
+def anti_cbc_decrypt(key: bytes, iv: bytes, blocks: bytes) -> bytes:
+    # Bounds checking
+    if type(key) is not bytes:
+        raise TypeError("key is not a byte-string")
+    if len(key) != 32:
+        raise ValueError("key is not 256 bits")
+    if type(iv) is not bytes:
+        raise TypeError("iv is not a byte-string")
+    if len(iv) != 16:
+        raise ValueError("iv is not 128 bits")
+    if type(blocks) is not bytes:
+        raise TypeError("blocks is not a byte-string")
+    if len(blocks) == 0:
+        raise ValueError("blocks is empty")
+    if len(blocks) % 16 != 0:
+        raise ValueError("blocks is not a multiple of 128 bits long")
+
+    # Anti CBC Decrypt
+    cipher: AES.EcbMode = AES.new(key, AES.MODE_ECB)
+    output: bytes = bytes()
+    cbc_intermediate: bytes = iv
+    for block in (blocks[i:i+16] for i in range(0, len(blocks), 16)):
+        aes_out: bytes = cipher.encrypt(block)
+        output += bytes((_a ^ _b for _a, _b in zip(aes_out, cbc_intermediate)))
+        cbc_intermediate = block
+    return output
 
 
 def fuzz(buf: bytes):

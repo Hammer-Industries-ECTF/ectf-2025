@@ -13,7 +13,6 @@ EXPECTED_TYPE_ERRORS = {
 }
 
 EXPECTED_VALUE_ERRORS = {
-    # "Too many channels (max 8):",
     "Invalid channel number: not representable as u32"
 }
 

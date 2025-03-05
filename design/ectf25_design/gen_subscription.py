@@ -50,19 +50,46 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
         raise ValueError("Could not find secret for channel:", channel)
 
     # Encrypt package
-    channel_cipher: AES.CbcMode = AES.new(secrets[str(channel)][0],
-                                          AES.MODE_CBC,
-                                          iv=secrets[str(channel)][1])
-    encoded_device_id: bytes = channel_cipher.decrypt(device_id.to_bytes(16, 'little'))
-    master_cipher: AES.CbcMode = AES.new(secrets["master"][0],
-                                         AES.MODE_CBC,
-                                         iv=secrets["master"][1])
-    encoded_update: bytes = master_cipher.decrypt(channel.to_bytes(16, 'little')
-                                                  + end.to_bytes(8, 'little')
-                                                  + start.to_bytes(8, 'little')
-                                                  + encoded_device_id)
+    encoded_device_id: bytes = _anti_cbc_encrypt(secrets[str(channel)][0],
+                                                 secrets[str(channel)][1],
+                                                 device_id.to_bytes(16, 'little'))
+    encoded_update: bytes = _anti_cbc_encrypt(secrets["master"][0],
+                                              secrets["master"][1],
+                                              (channel.to_bytes(16, 'little')
+                                               + end.to_bytes(8, 'little')
+                                               + start.to_bytes(8, 'little')
+                                               + encoded_device_id))
 
     return encoded_update
+
+
+def _anti_cbc_encrypt(key: bytes, iv: bytes, blocks: bytes) -> bytes:
+    # Bounds checking
+    if type(key) is not bytes:
+        raise TypeError("key is not a byte-string")
+    if len(key) != 32:
+        raise ValueError("key is not 256 bits")
+    if type(iv) is not bytes:
+        raise TypeError("iv is not a byte-string")
+    if len(iv) != 16:
+        raise ValueError("iv is not 128 bits")
+    if type(blocks) is not bytes:
+        raise TypeError("blocks is not a byte-string")
+    if len(blocks) == 0:
+        raise ValueError("blocks is empty")
+    if len(blocks) % 16 != 0:
+        raise ValueError("blocks is not a multiple of 128 bits long")
+
+    # Anti CBC Encrypt
+    cipher: AES.EcbMode = AES.new(key, AES.MODE_ECB)
+    output: bytes = bytes()
+    cbc_intermediate: bytes = iv
+    for block in (blocks[i:i+16] for i in range(0, len(blocks), 16)):
+        aes_in: bytes = bytes((_a ^ _b for _a, _b in zip(block, cbc_intermediate)))
+        aes_out: bytes = cipher.decrypt(aes_in)
+        cbc_intermediate = aes_out
+        output += aes_out
+    return output
 
 
 def parse_args():

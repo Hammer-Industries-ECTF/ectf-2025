@@ -50,21 +50,48 @@ class Encoder:
 
         # Encrypt package
         pad_bytes_needed = (16 - len(frame)) % 16
-        channel_cipher: AES.CbcMode = AES.new(self._secrets[str(channel)][0],
-                                              AES.MODE_CBC,
-                                              iv=self._secrets[str(channel)][1])
-        encoded_data: bytes = channel_cipher.decrypt(self._company_stamp
-                                                     + frame
-                                                     + (b'\x00' * pad_bytes_needed))
-        master_cipher: AES.CbcMode = AES.new(self._secrets["master"][0],
-                                             AES.MODE_CBC,
-                                             iv=self._secrets["master"][1])
-        encoded_frame: bytes = master_cipher.decrypt(timestamp.to_bytes(8, 'little')
-                                                     + channel.to_bytes(4, 'little')
-                                                     + len(frame).to_bytes(4, 'little')
-                                                     + encoded_data)
+        encoded_data: bytes = _anti_cbc_encrypt(self._secrets[str(channel)][0],
+                                                self._secrets[str(channel)][1],
+                                                (self._company_stamp
+                                                 + frame
+                                                 + (b'\x00' * pad_bytes_needed)))
+        encoded_frame: bytes = _anti_cbc_encrypt(self._secrets["master"][0],
+                                                 self._secrets["master"][1],
+                                                 (timestamp.to_bytes(8, 'little')
+                                                  + channel.to_bytes(4, 'little')
+                                                  + len(frame).to_bytes(4, 'little')
+                                                  + encoded_data))
 
         return encoded_frame
+
+
+def _anti_cbc_encrypt(key: bytes, iv: bytes, blocks: bytes) -> bytes:
+    # Bounds checking
+    if type(key) is not bytes:
+        raise TypeError("key is not a byte-string")
+    if len(key) != 32:
+        raise ValueError("key is not 256 bits")
+    if type(iv) is not bytes:
+        raise TypeError("iv is not a byte-string")
+    if len(iv) != 16:
+        raise ValueError("iv is not 128 bits")
+    if type(blocks) is not bytes:
+        raise TypeError("blocks is not a byte-string")
+    if len(blocks) == 0:
+        raise ValueError("blocks is empty")
+    if len(blocks) % 16 != 0:
+        raise ValueError("blocks is not a multiple of 128 bits long")
+
+    # Anti CBC Encrypt
+    cipher: AES.EcbMode = AES.new(key, AES.MODE_ECB)
+    output: bytes = bytes()
+    cbc_intermediate: bytes = iv
+    for block in (blocks[i:i+16] for i in range(0, len(blocks), 16)):
+        aes_in: bytes = bytes((_a ^ _b for _a, _b in zip(block, cbc_intermediate)))
+        aes_out: bytes = cipher.decrypt(aes_in)
+        cbc_intermediate = aes_out
+        output += aes_out
+    return output
 
 
 def parse_args():
