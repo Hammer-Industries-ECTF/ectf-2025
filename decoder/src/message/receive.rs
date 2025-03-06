@@ -73,188 +73,51 @@ fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
     let mut body_buf: [u8; 48] = [0; 48];
     transmit_ack(uart);
     uart.read_bytes(&mut body_buf);
-    let mut encrypted_blocks: Vec<AesBlock> = Vec::with_capacity(12);
-    encrypted_blocks.push([
-        u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[8..12].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[12..16].first_chunk::<4>().unwrap())
-    ]);
-    encrypted_blocks.push([
-        u32::from_le_bytes(*body_buf[16..20].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[20..24].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[24..28].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[28..32].first_chunk::<4>().unwrap())
-    ]);
-    encrypted_blocks.push([
-        u32::from_le_bytes(*body_buf[32..36].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[36..40].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[40..44].first_chunk::<4>().unwrap()),
-        u32::from_le_bytes(*body_buf[44..48].first_chunk::<4>().unwrap())
-    ]);
+    let encrypted_blocks: Vec<AesBlock> = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
     let decrypted_blocks = decrypt_message(aes, encrypted_blocks);
     if decrypted_blocks.is_err() { return Err(RXError::DecryptError(decrypted_blocks.unwrap_err())); }
     let decrypted_blocks = decrypted_blocks.unwrap();
-    let channel_id = extract_channel_id(
-        (decrypted_blocks[0][0] as u128) |
-            ((decrypted_blocks[0][1] as u128) << 32) |
-            ((decrypted_blocks[0][2] as u128) << 64) |
-            ((decrypted_blocks[0][3] as u128) << 96)
-    );
+    let channel_id = extract_channel_id(decrypted_blocks[0]);
     if channel_id.is_err() { return Err(RXError::PacketError(channel_id.unwrap_err())); }
     let channel_id = channel_id.unwrap();
-    let (end, start) = extract_timestamps(
-        (decrypted_blocks[1][0] as u128) |
-            ((decrypted_blocks[1][1] as u128) << 32) |
-            ((decrypted_blocks[1][2] as u128) << 64) |
-            ((decrypted_blocks[1][3] as u128) << 96)
-    );
+    let (end, start) = extract_timestamps(decrypted_blocks[1]);
     transmit_ack(uart);
     Ok(HostUpdateMessage{ channel_id, end, start, encrypted_decoder_id: decrypted_blocks[2] })
 }
 
 fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostDecodeMessage, RXError> {
-    let mut encrypted_blocks: Vec<AesBlock> = Vec::with_capacity(24);
+    let encrypted_blocks: Vec<AesBlock>;
     match header.length {
         48 => {
             let mut body_buf: [u8; 48] = [0; 48];
             transmit_ack(uart);
             uart.read_bytes(&mut body_buf);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[8..12].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[12..16].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[16..20].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[20..24].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[24..28].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[28..32].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[32..36].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[36..40].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[40..44].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[44..48].first_chunk::<4>().unwrap())
-            ]);
+            encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
         },
         64 => {
             let mut body_buf: [u8; 64] = [0; 64];
             transmit_ack(uart);
             uart.read_bytes(&mut body_buf);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[8..12].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[12..16].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[16..20].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[20..24].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[24..28].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[28..32].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[32..36].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[36..40].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[40..44].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[44..48].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[48..52].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[52..56].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[56..60].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[60..64].first_chunk::<4>().unwrap())
-            ]);
+            encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
         },
         80 => {
             let mut body_buf: [u8; 80] = [0; 80];
             transmit_ack(uart);
             uart.read_bytes(&mut body_buf);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[8..12].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[12..16].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[16..20].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[20..24].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[24..28].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[28..32].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[32..36].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[36..40].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[40..44].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[44..48].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[48..52].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[52..56].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[56..60].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[60..64].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[64..68].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[68..72].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[72..76].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[76..80].first_chunk::<4>().unwrap())
-            ]);
+            encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
         },
         96 => {
             let mut body_buf: [u8; 96] = [0; 96];
             transmit_ack(uart);
             uart.read_bytes(&mut body_buf);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[0..4].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[4..8].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[8..12].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[12..16].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[16..20].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[20..24].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[24..28].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[28..32].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[32..36].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[36..40].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[40..44].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[44..48].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[48..52].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[52..56].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[56..60].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[60..64].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[64..68].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[68..72].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[72..76].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[76..80].first_chunk::<4>().unwrap())
-            ]);
-            encrypted_blocks.push([
-                u32::from_le_bytes(*body_buf[80..84].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[84..88].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[88..92].first_chunk::<4>().unwrap()),
-                u32::from_le_bytes(*body_buf[92..96].first_chunk::<4>().unwrap())
-            ]);
+            encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
         },
         other => { return Err(RXError::InvalidLength(other)); }
     }
     let decrypted_blocks = decrypt_message(aes, encrypted_blocks);
     if decrypted_blocks.is_err() { return Err(RXError::DecryptError(decrypted_blocks.unwrap_err())); }
     let mut decrypted_blocks = decrypted_blocks.unwrap();
-    let (timestamp, channel_id, frame_length) = extract_frame_metadata(
-        (decrypted_blocks[0][0] as u128) |
-            ((decrypted_blocks[0][1] as u128) << 32) |
-            ((decrypted_blocks[0][2] as u128) << 64) |
-            ((decrypted_blocks[0][3] as u128) << 96)
-    );
+    let (timestamp, channel_id, frame_length) = extract_frame_metadata(decrypted_blocks[0]);
     decrypted_blocks.remove(0);
     transmit_ack(uart);
     Ok(HostDecodeMessage{ timestamp, channel_id, frame_length, encrypted_frame: decrypted_blocks })

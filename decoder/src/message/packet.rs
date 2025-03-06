@@ -1,26 +1,37 @@
+use hal::aes::AesBlock;
+
 #[derive(Debug, Clone)]
 pub enum PacketError {
     ZeroPaddingNotIntact(usize)
 }
 
-pub fn extract_channel_id(decoded_block: u128) -> Result<u32, PacketError> {
-    if decoded_block > 2u128.pow(32) - 1 { return Err(PacketError::ZeroPaddingNotIntact(96)); }
-    Ok(decoded_block as u32)
+pub fn extract_channel_id(decoded_block: AesBlock) -> Result<u32, PacketError> {
+    if !decoded_block[4..].iter().all(|x| *x == 0) {
+        Err(PacketError::ZeroPaddingNotIntact(96))
+    } else {
+        Ok(u32::from_le_bytes(*decoded_block.first_chunk::<4>().unwrap()))
+    }
 }
 
-pub fn extract_timestamps(decoded_block: u128) -> (u64, u64) {
-    (decoded_block as u64, (decoded_block >> 64) as u64)
+pub fn extract_timestamps(decoded_block: AesBlock) -> (u64, u64) {
+        (u64::from_le_bytes(*decoded_block.first_chunk::<8>().unwrap()),
+        u64::from_le_bytes(*decoded_block.last_chunk::<8>().unwrap()))
 }
 
-pub fn extract_decoder_id(decoded_block: u128) -> Result<u32, PacketError> {
-    if decoded_block > 2u128.pow(32) - 1 { return Err(PacketError::ZeroPaddingNotIntact(96)); }
-    Ok(decoded_block as u32)
+pub fn extract_decoder_id(decoded_block: AesBlock) -> Result<u32, PacketError> {
+    if !decoded_block[4..].iter().all(|x| *x == 0) {
+        Err(PacketError::ZeroPaddingNotIntact(96))
+    } else {
+        Ok(u32::from_le_bytes(*decoded_block.first_chunk::<4>().unwrap()))
+    }
 }
 
-pub fn extract_frame_metadata(decoded_block: u128) -> (u64, u32, u32) {
-    (decoded_block as u64, (decoded_block >> 64) as u32, (decoded_block >> 96) as u32)
+pub fn extract_frame_metadata(decoded_block: AesBlock) -> (u64, u32, u32) {
+    (u64::from_le_bytes(*decoded_block.first_chunk::<8>().unwrap()),
+    u32::from_le_bytes(*decoded_block.last_chunk::<8>().unwrap().first_chunk::<4>().unwrap()),
+    u32::from_le_bytes(*decoded_block.last_chunk::<4>().unwrap()))
 }
 
-pub fn verify_company_stamp(decoded_block: u128) -> bool {
-    decoded_block != u128::from_le_bytes(*b"HammerIndustries")
+pub fn verify_company_stamp(decoded_block: AesBlock) -> bool {
+    decoded_block != *b"HammerIndustries"
 }

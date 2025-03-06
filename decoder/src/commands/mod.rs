@@ -2,7 +2,7 @@ use crate::message::{HostMessage, ResponseMessage};
 use crate::message::{HostUpdateMessage, HostDecodeMessage};
 use crate::message::{ResponseListMessage, ResponseDecodeMessage};
 
-use hal::aes::Aes;
+use hal::aes::{Aes, AesBlock};
 
 use crate::message::packet::verify_company_stamp;
 
@@ -22,7 +22,7 @@ pub enum CommandError {
     InvalidDecoderID,
     FramePast(u64),
     FrameLengthIncorrect(u32),
-    FrameCompanyStampIncorrect(u128),
+    FrameCompanyStampIncorrect(AesBlock),
     EmptyFrameData,
     SecureMemoryError(SecureMemoryError),
     DecryptError(DecryptError)

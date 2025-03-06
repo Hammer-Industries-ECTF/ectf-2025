@@ -52,7 +52,7 @@ pub fn transmit_ack(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, 
 
 pub fn transmit_err<T: core::fmt::Debug>(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, error: T) -> Result<(), TXError> {
     let mut error_body = String::new();
-    write(&mut error_body, format_args!("{:?}", error));
+    write(&mut error_body, format_args!("{:?}", error)).expect("Could not create error message");
     let message_header = MessageHeader{ magic: MAGIC_BYTE, opcode: ERR_OPCODE, length: error_body.len() as u16 };
     transmit_header(uart, message_header);
     let ack = receive_ack(uart);
