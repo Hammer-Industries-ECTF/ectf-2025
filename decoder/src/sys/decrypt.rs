@@ -55,27 +55,37 @@ pub fn decrypt_frame(aes: &Aes, channel_id: u32, blocks: Vec<AesBlock>) -> Resul
 }
 
 fn decrypt_blocks(aes: &Aes, secret: &Secret, blocks: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
-    aes.set_key(&secret.aes_key);
+    let mut key = secret.aes_key;
+    key.reverse();
+    aes.set_key(&key);
     let mut decrypted_blocks: Vec<AesBlock> = Vec::with_capacity(blocks.len());
     let mut cbc= secret.aes_iv;
-    for block in blocks {
+    for mut block in blocks {
+        block.reverse();
         let aes_out = aes.decrypt_block(block);
         if aes_out.is_err() { return Err(DecryptError::AesError(aes_out.unwrap_err())); }
-        let aes_out = aes_out.unwrap();
+        let mut aes_out = aes_out.unwrap();
+        aes_out.reverse();
         let cbc_intermediate: Vec<u8> = zip(aes_out, cbc).map(|(x, y)| x ^ y).collect();
         let mut aes_out: AesBlock = [0; 16];
         aes_out.copy_from_slice(cbc_intermediate.as_slice());
         decrypted_blocks.push(aes_out);
+        block.reverse();
         cbc = block;
     }
     Ok(decrypted_blocks)
 }
 
 fn decrypt_block(aes: &Aes, secret: &Secret, block: AesBlock) -> Result<AesBlock, DecryptError> {
-    aes.set_key(&secret.aes_key);
+    let mut key = secret.aes_key;
+    key.reverse();
+    aes.set_key(&key);
+    let mut block = block;
+    block.reverse();
     let aes_out = aes.decrypt_block(block);
     if aes_out.is_err() { return Err(DecryptError::AesError(aes_out.unwrap_err())); }
-    let aes_out = aes_out.unwrap();
+    let mut aes_out = aes_out.unwrap();
+    aes_out.reverse();
     let cbc_intermediate: Vec<u8> = zip(aes_out, secret.aes_iv).map(|(x, y)| x ^ y).collect();
     let mut aes_out: AesBlock = [0; 16];
     aes_out.copy_from_slice(cbc_intermediate.as_slice());
