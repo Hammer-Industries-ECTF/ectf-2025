@@ -16,6 +16,8 @@ from loguru import logger
 
 from ectf25.utils.decoder import DecoderIntf
 
+import time
+
 
 def main():
     # Define and parse command line arguments
@@ -41,8 +43,11 @@ def main():
     decoder = DecoderIntf(args.port)
 
     # Run subscribe command
+    start = time.perf_counter_ns()
     decoder.subscribe(subscription)
+    end = time.perf_counter_ns()
 
+    logger.info(f"Time elapsed: {(end-start) / 1_000_000.0:3f} ms")
     logger.success("Subscribe successful")
 
 

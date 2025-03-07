@@ -33,6 +33,16 @@ fn main() -> ! {
         .set_divider::<hal::gcr::clocks::Div1>(&mut gcr.reg)
         .freeze();
 
+    // Initialize and split the GPIO2 peripheral into pins
+    let gpio2_pins = hal::gpio::Gpio2::new(p.gpio2, &mut gcr.reg).split();
+    // Enable output mode for the RGB LED pins
+    let mut led_r = gpio2_pins.p2_0.into_input_output();
+    let mut led_g = gpio2_pins.p2_1.into_input_output();
+    let mut led_b = gpio2_pins.p2_2.into_input_output();
+    led_r.set_power_vddioh();
+    led_g.set_power_vddioh();
+    led_b.set_power_vddioh();
+
     // Initialize and split the GPIO0 peripheral into pins
     let gpio0_pins = hal::gpio::Gpio0::new(p.gpio0, &mut gcr.reg).split();
     // Configure UART to host computer with 115200 8N1 settings
@@ -59,6 +69,10 @@ fn main() -> ! {
     // TODO INIT SUBSCRIPTION MEMORY
     
     // INIT TESTING BUFFERS
+
+    led_r.set_low();
+    led_g.set_high();
+    led_b.set_low();
 
     'message_loop: loop {
         let host_message = receive_message(&uart, &aes);

@@ -225,6 +225,8 @@ def main():
     encoder_time = 0
     decoder_time = 0
 
+    too_long = False
+
     try:
         # get frames from generator
         for channel, raw_frame, timestamp in args.frame_generator(args):
@@ -248,6 +250,8 @@ def main():
                 (channel, encoded_frame.decode(errors="backslashreplace"), timestamp)
             )
 
+            end, start = None, None
+
             # decode frame or use encoded frame if decoder stubbed out
             if args.stub_decoder:
                 decoded_frame = encoded_frame
@@ -255,16 +259,21 @@ def main():
             else:
                 start = time.perf_counter()
                 decoded_frame = decoder.decode(encoded_frame)
-                decoder_time += time.perf_counter() - start
+                end = time.perf_counter()
+                decoder_time += end - start
 
             # warn if frame doesn't match
             if raw_frame != decoded_frame:
+                too_long = True
                 logger.error(f"Decode frame {repr(raw_frame)} != {repr(decoded_frame)}")
 
             logger.info(f"DEC OUT {repr(decoded_frame)}")
             decoded_frames.append(
                 (channel, decoded_frame.decode(errors="backslashreplace"), timestamp)
             )
+
+            if end is not None and start is not None and (end-start) > 0.150:
+                logger.error(f"Decoder took too long: {end-start:6f} s")
 
             # print performance stats if requested
             if args.perf:
@@ -277,6 +286,10 @@ def main():
             # sleep if requested
             time.sleep(args.delay)
     finally:
+        logger.info("Test complete")
+        if too_long:
+            logger.error("Decoder specification failure. Read logs for more details")
+
         # dump frames
         if args.dump_raw:
             with open(args.dump_raw, "w") as f:

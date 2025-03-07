@@ -16,6 +16,8 @@ from loguru import logger
 
 from ectf25.utils.decoder import DecoderIntf
 
+import time
+
 
 def main():
     # Define and parse command line arguments
@@ -33,12 +35,15 @@ def main():
     decoder = DecoderIntf(args.port)
 
     # Run the list command
+    start = time.perf_counter_ns()
     subscriptions = decoder.list()
+    end = time.perf_counter_ns()
 
     # Print the results
     for channel, start, end in subscriptions:
         logger.info(f"Found subscription: Channel {channel} {start}:{end}")
 
+    logger.info(f"Time elapsed: {(end-start) / 1_000_000.0:3f} ms")
     logger.success("List successful")
 
 
