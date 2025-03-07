@@ -11,7 +11,7 @@ use crate::sys::secure_memory::{Subscription, SecureMemoryError};
 
 use crate::sys::decrypt::{decrypt_company_stamp, decrypt_decoder_id, decrypt_frame, DecryptError};
 
-use crate::utils::timestamp::{get_timestamp, set_timestamp};
+use crate::utils::timestamp::{verify_timestamp, set_timestamp};
 
 #[derive(Debug, Clone)]
 pub enum CommandError {
@@ -43,7 +43,6 @@ fn list_subscriptions() -> Result<ResponseListMessage, CommandError> {
 }
 
 fn update_subscription(aes: &Aes, message: HostUpdateMessage) -> Result<(), CommandError> {
-    // if retrieve_subscription(message.channel_id).is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
     let decoder_id = decrypt_decoder_id(aes, message.channel_id, message.encrypted_decoder_id);
     if decoder_id.is_err() { return Err(CommandError::DecryptError(decoder_id.unwrap_err())); }
     let decoder_id = decoder_id.unwrap();
@@ -61,16 +60,18 @@ fn update_subscription(aes: &Aes, message: HostUpdateMessage) -> Result<(), Comm
 }
 
 fn decode_message(aes: &Aes, message: HostDecodeMessage) -> Result<ResponseDecodeMessage, CommandError> {
-    if message.timestamp <= get_timestamp() { return Err(CommandError::FramePast(message.timestamp)); }
+    if !verify_timestamp(message.timestamp) { return Err(CommandError::FramePast(message.timestamp)); }
     if message.encrypted_frame.len() < 2 { return Err(CommandError::EmptyFrameData); }
     if message.frame_length == 0 || message.frame_length > 64 { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
     if ((((message.frame_length - 1) / 16) + 2) as usize) != message.encrypted_frame.len() { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
-    let subscription = retrieve_subscription(message.channel_id);
-    if subscription.is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
-    let subscription = subscription.unwrap();
-    if !subscription.valid { return Err(CommandError::NotSubscribed(message.channel_id)); }
-    if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
-    if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
+    if message.channel_id != 0 {
+        let subscription = retrieve_subscription(message.channel_id);
+        if subscription.is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
+        let subscription = subscription.unwrap();
+        if !subscription.valid { return Err(CommandError::NotSubscribed(message.channel_id)); }
+        if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
+        if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
+    }
     let decrypted_company_stamp = decrypt_company_stamp(aes, message.channel_id, *message.encrypted_frame.first().unwrap());
     if decrypted_company_stamp.is_err() { return Err(CommandError::DecryptError(decrypted_company_stamp.unwrap_err())); }
     let decrypted_company_stamp = decrypted_company_stamp.unwrap();
