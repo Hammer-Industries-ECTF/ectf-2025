@@ -1,12 +1,14 @@
 /* With some help from ChatGPT, but its not very good at linker files so Aidan Jacobsen reworked most of this from firmware.ld*/
 MEMORY {
-    ROM         (rx) : ORIGIN = 0x00000000, LENGTH = 0x00010000 /* 64kB ROM */
-    BOOTLOADER  (rx) : ORIGIN = 0x10000000, LENGTH = 0x0000E000 /* Bootloader flash */
-    START_FLASH (rx) : ORIGIN = 0x1000E000, LENGTH = 0x0000020C /* start flash to work with bootloader and rust toolchain */
-    FLASH       (rx) : ORIGIN = 0x1000E20C, LENGTH = 0x00037E04 /* Location of team firmware, skipping 200 bytes to make it work for this toolchain */
-    RESERVED    (rw) : ORIGIN = 0x10046000, LENGTH = 0x00038000 /* Reserved */
-    ROM_BL_PAGE (rw) : ORIGIN = 0x1007E000, LENGTH = 0x00002000 /* Reserved */
-    RAM        (rwx): ORIGIN = 0x20000000, LENGTH = 0x00020000 /* 128kB SRAM */
+    ROM           (rx) : ORIGIN = 0x00000000, LENGTH = 0x00010000 /* 64kB ROM */
+    BOOTLOADER    (rx) : ORIGIN = 0x10000000, LENGTH = 0x0000E000 /* Bootloader flash */
+    START_FLASH   (rx) : ORIGIN = 0x1000E000, LENGTH = 0x0000020C /* start flash to work with bootloader and rust toolchain */
+    FLASH         (rx) : ORIGIN = 0x1000E20C, LENGTH = 0x00037E04 /* Location of team firmware, skipping 200 bytes to make it work for this toolchain */
+    RESERVED      (rw) : ORIGIN = 0x10046000, LENGTH = 0x00038000 /* Reserved */
+    SUBSCRIPTIONS (rw) : ORIGIN = 0x1007A000, LENGTH = 0x00002000 /* Reserved */
+    SECRETS       (r)  : ORIGIN = 0x1007C000, LENGTH = 0x00002000 /* Reserved */
+    ROM_BL_PAGE   (rw) : ORIGIN = 0x1007E000, LENGTH = 0x00002000 /* Reserved */
+    RAM           (rwx): ORIGIN = 0x20000000, LENGTH = 0x00020000 /* 128kB SRAM */
 }
 
 SECTIONS {
@@ -32,4 +34,20 @@ SECTIONS {
         KEEP(*(.start_section));  /* Keep the section in the ELF file */
         KEEP(*(.firmware_startup)); /* Keep the startup section in the ELF file */
     } > START_FLASH
+
+    .subscriptions : {
+        KEEP(*(.subscriptions)) /* Ensure it's not removed */
+    } > SUBSCRIPTIONS
+
+    .secrets : {
+        decoder_id = .;
+        . += 0x4;
+        channel_secrets = .;
+
+        KEEP(*(.secrets))
+        KEEP(*(.decoder_id))
+        KEEP(*(.channel_secrets))
+    } > SECRETS
 }
+
+/*https://github.com/mitre-cyber-academy/2025-ectf-insecure-example/blob/release/decoder/firmware.ld#L7*/
