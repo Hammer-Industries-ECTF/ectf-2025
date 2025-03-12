@@ -13,7 +13,7 @@ use super::{MAGIC_BYTE, LIST_OPCODE, UPDATE_OPCODE, DECODE_OPCODE, ACK_OPCODE, E
 use super::receive::RXError;
 use super::receive::receive_ack;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum TXError {
     RXError(RXError),
     InvalidSubscriptionCount(u32)

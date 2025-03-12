@@ -18,7 +18,7 @@ use super::packet::{extract_channel_id, extract_timestamps, extract_frame_metada
 
 use super::transmit::transmit_ack;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum RXError {
     IncorrectMagic(u8),
     InvalidOpcode(u8),

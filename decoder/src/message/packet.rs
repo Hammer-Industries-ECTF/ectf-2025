@@ -1,6 +1,6 @@
 use hal::aes::AesBlock;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum PacketError {
     ZeroPaddingNotIntact(usize)
 }

@@ -13,7 +13,7 @@ use crate::sys::decrypt::{decrypt_company_stamp, decrypt_decoder_id, decrypt_fra
 
 use crate::utils::timestamp::{verify_timestamp, set_timestamp};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum CommandError {
     InvalidSubscriptionChannel(u32),
     NotSubscribed(u32),

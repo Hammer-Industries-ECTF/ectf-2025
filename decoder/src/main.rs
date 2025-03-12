@@ -54,11 +54,9 @@ fn main() -> ! {
         &mut gcr.reg
     );
 
-    // TODO INIT FLASH
-    // TODO INIT SECRETS
-    // TODO INIT SUBSCRIPTION MEMORY
-    
-    // INIT TESTING BUFFERS
+    let flc = hal::flc::Flc::new(p.flc, clks.sys_clk);
+    unsafe { sys::secure_memory::init_secrets_testing(&flc); }
+    flc.disable_page_write(address);
 
     'message_loop: loop {
         let host_message = receive_message(&uart, &aes);

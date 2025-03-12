@@ -14,7 +14,7 @@ use hal::aes::AesBlock;
 
 use crate::sys::secure_memory::Subscription;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct HostUpdateMessage {
     pub channel_id: u32, 
     pub end: u64,
@@ -54,7 +54,7 @@ pub enum ResponseMessage {
     Decode (ResponseDecodeMessage), 
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct MessageHeader {
     pub magic: u8,
     pub opcode: u8,

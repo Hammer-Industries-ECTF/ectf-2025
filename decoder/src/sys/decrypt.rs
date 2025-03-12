@@ -15,7 +15,7 @@ use crate::message::packet::extract_decoder_id;
 use super::secure_memory::Secret;
 use super::secure_memory::{retrieve_master_secret, retrieve_channel_secret};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum DecryptError {
     InvalidSecretChannel(u32),
     PacketError(PacketError),
