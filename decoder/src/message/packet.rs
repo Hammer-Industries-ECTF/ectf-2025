@@ -33,5 +33,6 @@ pub fn extract_frame_metadata(decoded_block: AesBlock) -> (u64, u32, u32) {
 }
 
 pub fn verify_company_stamp(decoded_block: AesBlock) -> bool {
+    todo!("make const time");
     decoded_block == *b"HammerIndustries"
 }

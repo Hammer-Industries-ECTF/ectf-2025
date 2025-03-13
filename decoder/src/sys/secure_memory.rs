@@ -1,16 +1,22 @@
 extern crate alloc;
 
+use core::slice::Iter;
+
 use hal::aes::{AesBlock, AesKey};
 use hal::flc::Flc;
+use hal::flc::FlashError;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SecureMemoryError {
     InvalidSubscriptionChannel(u32),
     SubscriptionNotValid(u32),
-    SubscriptionMemoryFull
+    SubscriptionMemoryFull,
+    NoMasterSecret,
+    FlashError(FlashError)
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(align(4))]
 pub struct Subscription {
     pub channel_id: u32,
     pub valid: bool,
@@ -25,110 +31,79 @@ pub enum SecretType {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(align(4))]
 pub struct Secret {
     pub secret_type: SecretType,
+    pub valid: bool,
     pub aes_key: AesKey,
     pub aes_iv: AesBlock
 }
 
-#[link_section = ".subscriptions"]
-#[no_mangle]
-static mut SUBSCRIPTIONS: [Subscription; 8] = [
-    Subscription{
-        channel_id: 0,
-        valid: false,
-        end: 0,
-        start: 0
-    }; 8
-];
-
-#[link_section = ".channel_secrets"]
-#[no_mangle]
-static mut SECRETS: heapless::Vec<Secret, 128> = heapless::Vec::new();
-
-#[link_section = ".decoder_id"]
-#[no_mangle]
-static DECODER_ID: u32 = 0xDEADBEEF;
-
-pub const SUBSCRIPTIONS_ADDRESS: usize = &SUBSCRIPTIONS as *const [Subscription; 8] as usize;
-
-pub unsafe fn init_secrets_testing(flc: &Flc) {
-    SECRETS.push_unchecked(Secret{
-        secret_type: SecretType::Master,
-        aes_key: [
-            0x13, 0x9e, 0x51, 0xcf, 0xa7, 0x59, 0x59, 0xaf, 0x38, 0x48, 0x34, 0xea, 0xc9, 0xd9, 0xd8, 0x65, 0x9f, 0x0f, 0xd0, 0xa3, 0xef, 0x01, 0x58, 0x37, 0x90, 0xec, 0xd6, 0xed, 0xf5, 0xa9, 0xbb, 0x95
-        ],
-        aes_iv: [
-            0x25, 0x3b, 0x42, 0x58, 0xac, 0x76, 0xcd, 0x74, 0xd9, 0x35, 0x77, 0x6b, 0xee, 0x78, 0xe6, 0xea
-        ]
-    });
-    SECRETS.push_unchecked(Secret{
-        secret_type: SecretType::Channel(0),
-        aes_key: [
-            0x1e, 0xf7, 0x80, 0x87, 0x4f, 0x8d, 0x75, 0x74, 0x2f, 0xf2, 0xaf, 0xee, 0x5b, 0x1e, 0xd6, 0xe6, 0x79, 0x16, 0x04, 0xc3, 0x1b, 0x00, 0xb0, 0x9b, 0x71, 0x1d, 0xea, 0xc3, 0x68, 0x46, 0x4f, 0x1d
-        ],
-        aes_iv: [
-            0xac, 0x1f, 0x8e, 0x1b, 0x37, 0x88, 0x18, 0x8b, 0xcd, 0x60, 0xd5, 0x27, 0x44, 0x86, 0x84, 0x3e
-        ]
-    });
-    SECRETS.push_unchecked(Secret{
-        secret_type: SecretType::Channel(1),
-        aes_key: [
-            0x37, 0x39, 0x78, 0xbb, 0x6a, 0x25, 0x3a, 0x12, 0xe5, 0xf0, 0x7f, 0x45, 0xf1, 0x6b, 0x00, 0x05, 0xb5, 0xe2, 0x12, 0xfc, 0x0d, 0xac, 0x52, 0x9a, 0xb7, 0xd5, 0xed, 0x7b, 0x35, 0x1f, 0xd1, 0xe2
-        ],
-        aes_iv: [
-            0xd4, 0xdb, 0x8c, 0x03, 0x10, 0x09, 0xe7, 0xf7, 0x1b, 0xf5, 0xb3, 0x3b, 0xc3, 0x47, 0x5c, 0x58
-        ]
-    });
-    SECRETS.push_unchecked(Secret{
-        secret_type: SecretType::Channel(2),
-        aes_key: [
-            0x7c, 0x91, 0xf8, 0x82, 0xff, 0x6c, 0xbc, 0xc2, 0x1d, 0xe3, 0xb1, 0x18, 0x06, 0x78, 0x26, 0x3c, 0x45, 0x5c, 0x96, 0x5d, 0x84, 0x42, 0x8d, 0xc4, 0x4f, 0x25, 0x21, 0xe8, 0x21, 0x0a, 0x8c, 0x90
-        ],
-        aes_iv: [
-            0x1e, 0x11, 0x08, 0x2e, 0xb8, 0xb9, 0xb9, 0xe8, 0x51, 0xa6, 0x40, 0x2d, 0xed, 0xc2, 0x87, 0x6c
-        ]
-    });
-    SECRETS.push_unchecked(Secret{
-        secret_type: SecretType::Channel(3),
-        aes_key: [
-            0x72, 0xd3, 0x6d, 0xd9, 0xfe, 0x0e, 0x38, 0xd0, 0xb1, 0xd6, 0xf3, 0xc2, 0x8d, 0x05, 0x3e, 0x98, 0x85, 0xeb, 0xb9, 0x77, 0x68, 0x3d, 0x23, 0xb5, 0xb0, 0xe8, 0xc3, 0x4e, 0x08, 0x4f, 0xbe, 0x3d
-        ],
-        aes_iv: [
-            0xa2, 0x9b, 0xdb, 0x54, 0xab, 0x9d, 0x1b, 0x6c, 0xc4, 0xdb, 0x6d, 0xd6, 0xb9, 0xf4, 0xc3, 0x2f
-        ]
-    });
-    SECRETS.push_unchecked(Secret{
-        secret_type: SecretType::Channel(4),
-        aes_key: [
-            0xc8, 0xd7, 0xdc, 0x5f, 0x91, 0x47, 0xd0, 0xaa, 0x7d, 0x3c, 0x6e, 0xc3, 0x1c, 0x40, 0xa4, 0xe8, 0x7b, 0x22, 0xb9, 0x61, 0x93, 0x47, 0xa6, 0xde, 0x0e, 0x2e, 0xc8, 0xc9, 0x43, 0x93, 0x68, 0xe2
-        ],
-        aes_iv: [
-            0xbd, 0x94, 0x03, 0x3e, 0x65, 0xbf, 0x11, 0x56, 0xea, 0x0a, 0x0a, 0x4c, 0xa3, 0x33, 0x8a, 0x24
-        ]
-    });
+extern "C" {
+    static subscriptions_address: u32;
+    static decoder_id_address: u32;
+    static secrets_address: u32;
 }
 
-pub fn retrieve_subscription(channel_id: u32) -> Option<&'static Subscription> {
-    unsafe { SUBSCRIPTIONS.iter().find(|x| x.channel_id == channel_id) }
+const SUBSCRIPTIONS_CAPACITY: usize = 8;
+const SECRETS_CAPACITY: usize = 128;
+
+fn find_const_time<P, T>(mut it: Iter<T>, predicate: P) -> Option<T>
+where
+    T: Sized + Copy,
+    P: Fn(&T) -> bool,
+{
+    let mut item = None;
+    while let Some(x) = it.next() {
+        if predicate(x) {
+            item = Some(*x);
+        }
+    }
+    item
 }
 
-pub fn retrieve_subscriptions() -> alloc::vec::Vec<Subscription> {
-    unsafe { SUBSCRIPTIONS.to_vec() }
+fn position_const_time<P, T>(it: Iter<T>, predicate: P) -> Option<usize>
+where
+    T: Sized,
+    P: Fn(&T) -> bool,
+{
+    let mut index = None;
+    let mut enumit = it.enumerate();
+    while let Some((i, x)) = enumit.next() {
+        if predicate(x) {
+            index = Some(i);
+        }
+    }
+    index
 }
 
-pub fn retrieve_channel_secret(channel_id: u32) -> Option<&'static Secret> {
-    unsafe { SECRETS.iter().find(|x| x.secret_type == SecretType::Channel(channel_id)) }
+fn retrieve_subscriptions_array(flc: &Flc) -> Result<[Subscription; SUBSCRIPTIONS_CAPACITY], SecureMemoryError> {
+    unsafe {
+        let subscriptions = flc.read_t::<[Subscription; SUBSCRIPTIONS_CAPACITY]>(subscriptions_address);
+        if subscriptions.is_err() { return Err(SecureMemoryError::FlashError(subscriptions.unwrap_err())); }
+        Ok(subscriptions.unwrap())
+    }
 }
 
-pub fn retrieve_master_secret() -> &'static Secret {
-    unsafe { SECRETS.iter().find(|x| x.secret_type == SecretType::Master).unwrap() }
+pub fn retrieve_subscription(flc: &Flc, channel_id: u32) -> Result<Option<Subscription>, SecureMemoryError> {
+    let subscriptions = retrieve_subscriptions(flc);
+    if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
+    Ok(find_const_time(subscriptions.unwrap().iter(), |sub| sub.valid && sub.channel_id == channel_id))
 }
 
-pub fn overwrite_subscription(subscription: Subscription) -> Result<(), SecureMemoryError> {
+pub fn retrieve_subscriptions(flc: &Flc) -> Result<alloc::vec::Vec<Subscription>, SecureMemoryError> {
+    let subscriptions = retrieve_subscriptions_array(flc);
+    if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
+    Ok(subscriptions.unwrap().to_vec())
+}
+
+pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(), SecureMemoryError> {
     if subscription.channel_id == 0 { return Err(SecureMemoryError::InvalidSubscriptionChannel(subscription.channel_id)); }
     if !subscription.valid { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
     if subscription.end < subscription.start { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
+    let subscriptions = retrieve_subscriptions_array(flc);
+    if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
+    let mut subscriptions = subscriptions.unwrap();
     unsafe {
         let open_slot = SUBSCRIPTIONS.iter().position(|x| !x.valid);
         if open_slot.is_none() { return Err(SecureMemoryError::SubscriptionMemoryFull); }
@@ -138,6 +113,34 @@ pub fn overwrite_subscription(subscription: Subscription) -> Result<(), SecureMe
     }
 }
 
-pub fn verify_decoder_id(decoder_id: u32) -> bool {
-    decoder_id == DECODER_ID
+fn retrieve_secrets_array(flc: &Flc) -> Result<[Secret; SECRETS_CAPACITY], SecureMemoryError> {
+    unsafe {
+        let secrets = flc.read_t::<[Secret; SECRETS_CAPACITY]>(secrets_address);
+        if secrets.is_err() { return Err(SecureMemoryError::FlashError(secrets.unwrap_err())); }
+        Ok(secrets.unwrap())
+    }
+}
+
+pub fn retrieve_channel_secret(flc: &Flc, channel_id: u32) -> Result<Option<Secret>, SecureMemoryError> {
+    let secrets = retrieve_secrets_array(flc);
+    if secrets.is_err() { return Err(secrets.unwrap_err()); }
+    Ok(find_const_time(secrets.unwrap().iter(), |sec| sec.valid && sec.secret_type == SecretType::Channel(channel_id)))
+}
+
+pub fn retrieve_master_secret(flc: &Flc) -> Result<Secret, SecureMemoryError> {
+    let secrets = retrieve_secrets_array(flc);
+    if secrets.is_err() { return Err(secrets.unwrap_err()); }
+    let master_secret = find_const_time(secrets.unwrap().iter(), |sec| sec.valid && sec.secret_type == SecretType::Master);
+    match master_secret {
+        Some(master_secret) => Ok(master_secret),
+        None => Err(SecureMemoryError::NoMasterSecret)
+    }
+}
+
+pub fn verify_decoder_id(flc: &Flc, decoder_id: u32) -> Result<bool, SecureMemoryError> {
+    unsafe {
+        let saved_decoder_id = flc.read_32(decoder_id_address);
+        if saved_decoder_id.is_err() { return Err(SecureMemoryError::FlashError(saved_decoder_id.unwrap_err())); }
+        Ok(saved_decoder_id.unwrap() == decoder_id)
+    }
 }
