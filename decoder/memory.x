@@ -36,17 +36,18 @@ SECTIONS {
     } > START_FLASH
 
     .subscriptions : {
+        subscriptions_address = .;
         KEEP(*(.subscriptions)) /* Ensure it's not removed */
     } > SUBSCRIPTIONS
 
     .secrets : {
-        decoder_id = .;
+        decoder_id_address = .;
         . += 0x4;
-        channel_secrets = .;
+        secrets_address = .;
 
         KEEP(*(.secrets))
-        KEEP(*(.decoder_id))
-        KEEP(*(.channel_secrets))
+        /* KEEP(*(.decoder_id))
+        KEEP(*(.channel_secrets)) */
     } > SECRETS
 }
 
