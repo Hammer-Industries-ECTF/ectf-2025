@@ -14,6 +14,7 @@ use super::receive::RXError;
 use super::receive::receive_ack;
 
 #[derive(Debug, Clone, Copy)]
+#[allow(unused)]
 pub enum TXError {
     RXError(RXError),
     InvalidSubscriptionCount(u32)

@@ -7,6 +7,7 @@ use hal::flc::Flc;
 use hal::flc::FlashError;
 
 #[derive(Debug, Clone, Copy)]
+#[allow(unused)]
 pub enum SecureMemoryError {
     InvalidSubscriptionChannel(u32),
     SubscriptionNotValid(u32),
@@ -16,7 +17,7 @@ pub enum SecureMemoryError {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[repr(align(4))]
+#[repr(C, align(4))]
 pub struct Subscription {
     pub channel_id: u32,
     pub valid: bool,
@@ -31,7 +32,7 @@ pub enum SecretType {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[repr(align(4))]
+#[repr(C, align(4))]
 pub struct Secret {
     pub secret_type: SecretType,
     pub valid: bool,
@@ -103,13 +104,17 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
     if subscription.end < subscription.start { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
     let subscriptions = retrieve_subscriptions_array(flc);
     if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
-    let mut subscriptions = subscriptions.unwrap();
+    let subscriptions = subscriptions.unwrap();
+    let open_slot = position_const_time(subscriptions.iter(), |x| !x.valid || (x.valid && x.channel_id == subscription.channel_id));
+    if open_slot.is_none() { return Err(SecureMemoryError::SubscriptionMemoryFull); }
+    let open_slot = open_slot.unwrap();
     unsafe {
-        let open_slot = SUBSCRIPTIONS.iter().position(|x| !x.valid);
-        if open_slot.is_none() { return Err(SecureMemoryError::SubscriptionMemoryFull); }
-        let open_slot = open_slot.unwrap();
-        SUBSCRIPTIONS[open_slot] = subscription;
-        Ok(())
+        let open_address: u32 = subscriptions_address + (open_slot * (size_of::<Subscription>())) as u32;
+        let data: [u32; size_of::<Subscription>() / 4] = core::mem::transmute(subscription);
+        match flc.write_u32_slice(open_address, &data) {
+            Ok(()) => Ok(()),
+            Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
+        }
     }
 }
 

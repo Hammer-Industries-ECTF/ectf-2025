@@ -55,11 +55,9 @@ fn main() -> ! {
     );
 
     let flc = hal::flc::Flc::new(p.flc, clks.sys_clk);
-    unsafe { sys::secure_memory::init_secrets_testing(&flc); }
-    flc.disable_page_write(address);
 
     'message_loop: loop {
-        let host_message = receive_message(&uart, &aes);
+        let host_message = receive_message(&flc, &uart, &aes);
         if host_message.is_err() {
             let transmit = transmit_err(&uart, host_message.unwrap_err());
             if transmit.is_err() { todo!(); } // panic? reset?
@@ -67,7 +65,7 @@ fn main() -> ! {
         }
         let host_message = host_message.unwrap();
 
-        let response_message = execute_command(&aes, host_message);
+        let response_message = execute_command(&flc, &aes, host_message);
 
         match response_message {
             Ok(response) => {

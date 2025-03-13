@@ -3,6 +3,8 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+use hal::flc::Flc;
+
 use hal::aes::{Aes, AesBlock};
 
 use hal::{gpio::{Af1, Pin}, pac::Uart0, uart::BuiltUartPeripheral};
@@ -19,6 +21,7 @@ use super::packet::{extract_channel_id, extract_timestamps, extract_frame_metada
 use super::transmit::transmit_ack;
 
 #[derive(Debug, Clone, Copy)]
+#[allow(unused)]
 pub enum RXError {
     IncorrectMagic(u8),
     InvalidOpcode(u8),
@@ -30,7 +33,7 @@ pub enum RXError {
     DecryptError(DecryptError)
 }
 
-pub fn receive_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes) -> Result<HostMessage, RXError> {
+pub fn receive_message(flc: &Flc, uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes) -> Result<HostMessage, RXError> {
     let message_header = receive_header(uart);
     if message_header.magic != MAGIC_BYTE { return Err(RXError::IncorrectMagic(message_header.magic)); }
     match message_header.opcode {
@@ -39,8 +42,8 @@ pub fn receive_message(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
             transmit_ack(uart);
             Ok(HostMessage::List)
         },
-        UPDATE_OPCODE => { Ok(HostMessage::Update(receive_update_body(uart, aes, message_header)?)) },
-        DECODE_OPCODE => { Ok(HostMessage::Decode(receive_decode_body(uart, aes, message_header)?)) },
+        UPDATE_OPCODE => { Ok(HostMessage::Update(receive_update_body(flc, uart, aes, message_header)?)) },
+        DECODE_OPCODE => { Ok(HostMessage::Decode(receive_decode_body(flc, uart, aes, message_header)?)) },
         DEBUG_OPCODE => { Err(RXError::UnexpectedDebug) },
         ACK_OPCODE => { Err(RXError::UnexpectedACK) },
         ERR_OPCODE => { Err(RXError::UnexpectedERR) },
@@ -68,13 +71,13 @@ fn receive_header(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af
     MessageHeader{ magic: header_buf[0], opcode: header_buf[1], length: u16::from_le_bytes(length_buf) }
 }
 
-fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostUpdateMessage, RXError> {
+fn receive_update_body(flc: &Flc, uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostUpdateMessage, RXError> {
     if header.length != 48 { return Err(RXError::InvalidLength(header.length)); }
     let mut body_buf: [u8; 48] = [0; 48];
     transmit_ack(uart);
     uart.read_bytes(&mut body_buf);
     let encrypted_blocks: Vec<AesBlock> = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
-    let decrypted_blocks = decrypt_message(aes, encrypted_blocks);
+    let decrypted_blocks = decrypt_message(flc, aes, encrypted_blocks);
     if decrypted_blocks.is_err() { return Err(RXError::DecryptError(decrypted_blocks.unwrap_err())); }
     let decrypted_blocks = decrypted_blocks.unwrap();
     let channel_id = extract_channel_id(decrypted_blocks[0]);
@@ -85,7 +88,7 @@ fn receive_update_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
     Ok(HostUpdateMessage{ channel_id, end, start, encrypted_decoder_id: decrypted_blocks[2] })
 }
 
-fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostDecodeMessage, RXError> {
+fn receive_decode_body(flc: &Flc, uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostDecodeMessage, RXError> {
     let encrypted_blocks: Vec<AesBlock>;
     match header.length {
         48 => {
@@ -114,7 +117,7 @@ fn receive_decode_body(uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 
         },
         other => { return Err(RXError::InvalidLength(other)); }
     }
-    let decrypted_blocks = decrypt_message(aes, encrypted_blocks);
+    let decrypted_blocks = decrypt_message(flc, aes, encrypted_blocks);
     if decrypted_blocks.is_err() { return Err(RXError::DecryptError(decrypted_blocks.unwrap_err())); }
     let mut decrypted_blocks = decrypted_blocks.unwrap();
     let (timestamp, channel_id, frame_length) = extract_frame_metadata(decrypted_blocks[0]);

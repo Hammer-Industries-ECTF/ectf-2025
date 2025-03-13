@@ -1,9 +1,14 @@
+use core::iter::zip;
+
 use hal::aes::AesBlock;
 
 #[derive(Debug, Clone, Copy)]
+#[allow(unused)]
 pub enum PacketError {
     ZeroPaddingNotIntact(usize)
 }
+
+static COMPANY_STAMP: AesBlock = *b"HammerIndustries";
 
 pub fn extract_channel_id(decoded_block: AesBlock) -> Result<u32, PacketError> {
     if !decoded_block[4..].iter().all(|x| *x == 0) {
@@ -33,6 +38,9 @@ pub fn extract_frame_metadata(decoded_block: AesBlock) -> (u64, u32, u32) {
 }
 
 pub fn verify_company_stamp(decoded_block: AesBlock) -> bool {
-    todo!("make const time");
-    decoded_block == *b"HammerIndustries"
+    let mut c: u8 = 0;
+    for (block_byte, stamp_byte) in zip(decoded_block, COMPANY_STAMP) {
+        c |= block_byte ^ stamp_byte
+    }
+    c == 0
 }

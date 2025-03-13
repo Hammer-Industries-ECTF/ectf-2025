@@ -5,30 +5,36 @@ use core::iter::zip;
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hal::aes::Aes;
+use hal::flc::Flc;
 
+use hal::aes::Aes;
 use hal::aes::{AesBlock, AesError};
 
 use crate::message::packet::PacketError;
 use crate::message::packet::extract_decoder_id;
 
-use super::secure_memory::Secret;
+use super::secure_memory::{Secret, SecureMemoryError};
 use super::secure_memory::{retrieve_master_secret, retrieve_channel_secret};
 
 #[derive(Debug, Clone, Copy)]
+#[allow(unused)]
 pub enum DecryptError {
     InvalidSecretChannel(u32),
     PacketError(PacketError),
-    AesError(AesError)
+    AesError(AesError),
+    SecureMemoryError(SecureMemoryError)
 }
 
-pub fn decrypt_message(aes: &Aes, message: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
-    let secret = retrieve_master_secret();
-    decrypt_blocks(aes, secret, message)
+pub fn decrypt_message(flc: &Flc, aes: &Aes, message: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
+    let secret = retrieve_master_secret(flc);
+    if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
+    decrypt_blocks(aes, secret.unwrap(), message)
 }
 
-pub fn decrypt_decoder_id(aes: &Aes, channel_id: u32, block: AesBlock) -> Result<u32, DecryptError> {
-    let secret = retrieve_channel_secret(channel_id);
+pub fn decrypt_decoder_id(flc: &Flc, aes: &Aes, channel_id: u32, block: AesBlock) -> Result<u32, DecryptError> {
+    let secret = retrieve_channel_secret(flc, channel_id);
+    if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
+    let secret = secret.unwrap();
     if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
     let decoded_block = decrypt_block(aes, secret, block)?;
@@ -37,15 +43,19 @@ pub fn decrypt_decoder_id(aes: &Aes, channel_id: u32, block: AesBlock) -> Result
     Ok(decoder_id.unwrap())
 }
 
-pub fn decrypt_company_stamp(aes: &Aes, channel_id: u32, block: AesBlock) -> Result<AesBlock, DecryptError> {
-    let secret = retrieve_channel_secret(channel_id);
+pub fn decrypt_company_stamp(flc: &Flc, aes: &Aes, channel_id: u32, block: AesBlock) -> Result<AesBlock, DecryptError> {
+    let secret = retrieve_channel_secret(flc, channel_id);
+    if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
+    let secret = secret.unwrap();
     if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
     decrypt_block(aes, secret, block)
 }
 
-pub fn decrypt_frame(aes: &Aes, channel_id: u32, blocks: Vec<AesBlock>) -> Result<Vec<u8>, DecryptError> {
-    let secret = retrieve_channel_secret(channel_id);
+pub fn decrypt_frame(flc: &Flc, aes: &Aes, channel_id: u32, blocks: Vec<AesBlock>) -> Result<Vec<u8>, DecryptError> {
+    let secret = retrieve_channel_secret(flc, channel_id);
+    if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
+    let secret = secret.unwrap();
     if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
     let mut decrypted_blocks = decrypt_blocks(aes, secret, blocks)?;
@@ -54,7 +64,7 @@ pub fn decrypt_frame(aes: &Aes, channel_id: u32, blocks: Vec<AesBlock>) -> Resul
     Ok(decrypted_blocks)
 }
 
-fn decrypt_blocks(aes: &Aes, secret: &Secret, blocks: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
+fn decrypt_blocks(aes: &Aes, secret: Secret, blocks: Vec<AesBlock>) -> Result<Vec<AesBlock>, DecryptError> {
     let mut key = secret.aes_key;
     key.reverse();
     aes.set_key(&key);
@@ -76,7 +86,7 @@ fn decrypt_blocks(aes: &Aes, secret: &Secret, blocks: Vec<AesBlock>) -> Result<V
     Ok(decrypted_blocks)
 }
 
-fn decrypt_block(aes: &Aes, secret: &Secret, block: AesBlock) -> Result<AesBlock, DecryptError> {
+fn decrypt_block(aes: &Aes, secret: Secret, block: AesBlock) -> Result<AesBlock, DecryptError> {
     let mut key = secret.aes_key;
     key.reverse();
     aes.set_key(&key);
