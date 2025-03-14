@@ -10,10 +10,6 @@
 //!
 //! The build script also sets the linker flags to tell it which link script to use.
 
-#[path = "src/sys/mod.rs"]
-mod secure_memory;
-
-use sys::secure_memory::{Secret, SecretType};
 use std::default;
 use std::env;
 use std::convert::TryInto;
@@ -28,12 +24,29 @@ use serde_json;
 use serde_json::Map;
 use serde_json::Value;
 
-// include!("src/sys/secure_memory.rs");
-
 struct RawSecret {
     id: String,
     aes_key: Vec<u8>,
     iv: Vec<u8>,
+}
+
+type AesSubBlock = u8;
+type AesBlock = [AesSubBlock; 16];
+type AesKey = [u8; 32];
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SecretType {
+    Channel(u32),
+    Master
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C, align(4))]
+pub struct Secret {
+    pub secret_type: SecretType,
+    pub valid: bool,
+    pub aes_key: AesKey,
+    pub aes_iv: AesBlock
 }
 
 fn main() {
@@ -66,6 +79,7 @@ fn main() {
     // Add secrets during build process //
     //==================================//
     // Read the secrets JSON file
+    todo!("Check path against docker command");
     let secrets_path = Path::new("../secrets.json");
     let secrets_str = fs::read_to_string(secrets_path).expect("Failed to read secrets.json");
 
@@ -98,6 +112,10 @@ fn main() {
             aes_key: base64_url::decode(&aes_key).unwrap(),
             iv: base64_url::decode(&iv).unwrap(),
         };
+
+        assert_eq!(secret_arr.aes_key.len(), 16);
+        assert_eq!(secret_arr.iv.len(), 8);
+
         raw_secrets_vec.push(secret_arr);
     }
 
@@ -114,8 +132,8 @@ fn main() {
         let secret = Secret {
             secret_type: secret_type,
             valid: true,
-            aes_key: raw_secret.aes_key,
-            aes_iv: raw_secret.iv,
+            aes_key: raw_secret.aes_key.try_into().unwrap(),
+            aes_iv: raw_secret.iv.try_into().unwrap(),
         };
 
         secrets_vec.push(secret);
@@ -126,13 +144,13 @@ fn main() {
             secret_type: SecretType::Channel(u32::MAX),
             valid: false,
             aes_key: [0xFFu8; 32],
-            aes_iv: [0xFFu8; 8],
+            aes_iv: [0xFFu8; 16],
         }; 128];
 
     for (sidx, secret) in secrets_vec.into_iter().enumerate() {
         secrets_arr[sidx] = secret;
     }
 
-    todo!("Decoder ID load");
+    todo!("Decoder ID load from environ var");
     
 }
