@@ -14,14 +14,8 @@ static mut SUBSCRIPTIONS: [Subscription; 8] = [
 
 #[link_section = ".channel_secrets"]
 #[no_mangle]
-static mut SECRETS: heapless::Vec<Secret, 128> = heapless::Vec::new();
-
-#[link_section = ".decoder_id"]
-#[no_mangle]
-static DECODER_ID: u32 = 0xDEADBEEF;
-
-pub unsafe fn init_secrets_testing() {
-    SECRETS.push_unchecked(Secret{
+static SECRETS: [Secret; 128] = [
+    Secret{
         secret_type: SecretType::Master,
         valid: true,
         aes_key: [
@@ -30,8 +24,8 @@ pub unsafe fn init_secrets_testing() {
         aes_iv: [
             0x25, 0x3b, 0x42, 0x58, 0xac, 0x76, 0xcd, 0x74, 0xd9, 0x35, 0x77, 0x6b, 0xee, 0x78, 0xe6, 0xea
         ]
-    });
-    SECRETS.push_unchecked(Secret{
+    },
+    Secret{
         secret_type: SecretType::Channel(0),
         valid: true,
         aes_key: [
@@ -40,8 +34,8 @@ pub unsafe fn init_secrets_testing() {
         aes_iv: [
             0xac, 0x1f, 0x8e, 0x1b, 0x37, 0x88, 0x18, 0x8b, 0xcd, 0x60, 0xd5, 0x27, 0x44, 0x86, 0x84, 0x3e
         ]
-    });
-    SECRETS.push_unchecked(Secret{
+    },
+    Secret{
         secret_type: SecretType::Channel(1),
         valid: true,
         aes_key: [
@@ -50,8 +44,8 @@ pub unsafe fn init_secrets_testing() {
         aes_iv: [
             0xd4, 0xdb, 0x8c, 0x03, 0x10, 0x09, 0xe7, 0xf7, 0x1b, 0xf5, 0xb3, 0x3b, 0xc3, 0x47, 0x5c, 0x58
         ]
-    });
-    SECRETS.push_unchecked(Secret{
+    },
+    Secret{
         secret_type: SecretType::Channel(2),
         valid: true,
         aes_key: [
@@ -60,8 +54,8 @@ pub unsafe fn init_secrets_testing() {
         aes_iv: [
             0x1e, 0x11, 0x08, 0x2e, 0xb8, 0xb9, 0xb9, 0xe8, 0x51, 0xa6, 0x40, 0x2d, 0xed, 0xc2, 0x87, 0x6c
         ]
-    });
-    SECRETS.push_unchecked(Secret{
+    },
+    Secret{
         secret_type: SecretType::Channel(3),
         valid: true,
         aes_key: [
@@ -70,8 +64,8 @@ pub unsafe fn init_secrets_testing() {
         aes_iv: [
             0xa2, 0x9b, 0xdb, 0x54, 0xab, 0x9d, 0x1b, 0x6c, 0xc4, 0xdb, 0x6d, 0xd6, 0xb9, 0xf4, 0xc3, 0x2f
         ]
-    });
-    SECRETS.push_unchecked(Secret{
+    },
+    Secret{
         secret_type: SecretType::Channel(4),
         valid: true,
         aes_key: [
@@ -80,5 +74,741 @@ pub unsafe fn init_secrets_testing() {
         aes_iv: [
             0xbd, 0x94, 0x03, 0x3e, 0x65, 0xbf, 0x11, 0x56, 0xea, 0x0a, 0x0a, 0x4c, 0xa3, 0x33, 0x8a, 0x24
         ]
-    });
-}
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    },
+    Secret{
+        secret_type: SecretType::Master,
+        valid: false,
+        aes_key: [0; 32],
+        aes_iv: [0; 16]
+    }
+];
+
+#[link_section = ".decoder_id"]
+#[no_mangle]
+static DECODER_ID: u32 = 0xDEADBEEF;
