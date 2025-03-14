@@ -40,11 +40,15 @@ pub struct Secret {
     pub aes_iv: AesBlock
 }
 
-extern "C" {
-    static subscriptions_address: u32;
-    static decoder_id_address: u32;
-    static secrets_address: u32;
-}
+// extern "C" {
+//     static subscriptions_address: u32;
+//     static decoder_id_address: u32;
+//     static secrets_address: u32;
+// }
+
+static subscriptions_address: u32 = 0x1007a000;
+static decoder_id_address: u32 = 0x1007c000;
+static secrets_address: u32 = 0x1007c004;
 
 const SUBSCRIPTIONS_CAPACITY: usize = 8;
 const SECRETS_CAPACITY: usize = 128;
@@ -83,16 +87,12 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
     if subscription.channel_id == 0 { return Err(SecureMemoryError::InvalidSubscriptionChannel(subscription.channel_id)); }
     if !subscription.valid { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
     if subscription.end < subscription.start { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
+    let mut subscriptions = retrieve_subscriptions(flc)?;
     let mut slot = Slot::Full;
-    for i in 0..SUBSCRIPTIONS_CAPACITY {
+    for (i, sub) in subscriptions.iter().enumerate() {
         let mut this_slot = Slot::Full;
-        unsafe {
-            let sub = flc.read_t::<Subscription>(subscriptions_address + (i * size_of::<Subscription>()) as u32);
-            if sub.is_err() { return Err(SecureMemoryError::FlashError(sub.unwrap_err())); }
-            let sub = sub.unwrap();
-            if !sub.valid { this_slot = Slot::Empty(i); }
-            if sub.valid && sub.channel_id == subscription.channel_id { this_slot = Slot::Existing(i); }
-        }
+        if !sub.valid { this_slot = Slot::Empty(i); }
+        if sub.valid && sub.channel_id == subscription.channel_id { this_slot = Slot::Existing(i); }
         match slot {
             Slot::Full => {
                 if this_slot == Slot::Full {
@@ -123,20 +123,42 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
             Err(SecureMemoryError::SubscriptionMemoryFull)
         },
         Slot::Empty(i) => {
+            subscriptions[i] = subscription;
+            let mut subscription_array: [Subscription; SUBSCRIPTIONS_CAPACITY] = [
+                Subscription{
+                    channel_id: 0,
+                    valid: false,
+                    end: 0,
+                    start: 0
+                }; 8
+            ];
+            subscription_array.copy_from_slice(subscriptions.as_slice());
             unsafe {
-                let open_address: u32 = subscriptions_address + (i * (size_of::<Subscription>())) as u32;
-                let data: [u32; size_of::<Subscription>() / 4] = core::mem::transmute(subscription);
-                match flc.write_u32_slice(open_address, &data) {
+                let data: [u32; SUBSCRIPTIONS_CAPACITY * size_of::<Subscription>() / 4] = core::mem::transmute(subscription_array);
+                let ret = flc.erase_page(subscriptions_address);
+                if ret.is_err() { return Err(SecureMemoryError::FlashError(ret.unwrap_err())); }
+                match flc.write_u32_slice(subscriptions_address, &data) {
                     Ok(()) => Ok(()),
                     Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
                 }
             }
         },
         Slot::Existing(i) => {
+            subscriptions[i] = subscription;
+            let mut subscription_array: [Subscription; SUBSCRIPTIONS_CAPACITY] = [
+                Subscription{
+                    channel_id: 0,
+                    valid: false,
+                    end: 0,
+                    start: 0
+                }; 8
+            ];
+            subscription_array.copy_from_slice(subscriptions.as_slice());
             unsafe {
-                let open_address: u32 = subscriptions_address + (i * (size_of::<Subscription>())) as u32;
-                let data: [u32; size_of::<Subscription>() / 4] = core::mem::transmute(subscription);
-                match flc.write_u32_slice(open_address, &data) {
+                let data: [u32; SUBSCRIPTIONS_CAPACITY * size_of::<Subscription>() / 4] = core::mem::transmute(subscription_array);
+                let ret = flc.erase_page(subscriptions_address);
+                if ret.is_err() { return Err(SecureMemoryError::FlashError(ret.unwrap_err())); }
+                match flc.write_u32_slice(subscriptions_address, &data) {
                     Ok(()) => Ok(()),
                     Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
                 }
