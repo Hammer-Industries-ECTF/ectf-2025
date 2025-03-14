@@ -1,7 +1,7 @@
 # flake8: noqa
 from pythonfuzz.main import PythonFuzz
 from json import loads
-from base64 import urlsafe_b64decode
+from base64 import standard_b64decode
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from ectf25_design.gen_secrets import gen_secrets
@@ -36,7 +36,7 @@ def output_verifier(gen_secrets_output: bytes):
     secrets_data: dict[str, list[str]] = loads(gen_secrets_output.decode("utf-8"))
     if any((len(secret_list) != 2 for secret_list in secrets_data.values())):
         raise ValueError("Found improper amount of secret pairs for channel")
-    secrets = {k: (urlsafe_b64decode(v[0]), urlsafe_b64decode(v[1]))
+    secrets = {k: (standard_b64decode(v[0]), standard_b64decode(v[1]))
                         for k, v in secrets_data.items()}
 
     # Secrets bounds checking

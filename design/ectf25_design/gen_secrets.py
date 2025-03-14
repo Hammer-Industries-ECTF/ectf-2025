@@ -1,4 +1,5 @@
-from secrets import token_urlsafe
+from secrets import token_bytes
+from base64 import standard_b64encode
 from json import dumps
 from argparse import ArgumentParser
 from pathlib import Path
@@ -18,16 +19,16 @@ def gen_secrets(channels: list[int]) -> bytes:
     # Generate 256-bit AES keys and 128-bit CBC IVs
     secret_nums: list[str] = list()
     for _ in range(len(channels)+1):
-        secret_nums.append(token_urlsafe(32) + "=")
-        secret_nums.append(token_urlsafe(16) + "==")
+        secret_nums.append(standard_b64encode(token_bytes(32)).decode("ascii"))
+        secret_nums.append(standard_b64encode(token_bytes(16)).decode("ascii"))
 
     # Non-duplicate check
     while len(set(secret_nums)) < len(secret_nums):
         # Generate 256-bit AES keys and 128-bit CBC IVs
         secret_nums: list[str] = list()
         for _ in range(len(channels)+1):
-            secret_nums.append(token_urlsafe(32))
-            secret_nums.append(token_urlsafe(16))
+            secret_nums.append(standard_b64encode(token_bytes(32)).decode("ascii"))
+            secret_nums.append(standard_b64encode(token_bytes(16)).decode("ascii"))
 
     # Assign secrets
     secrets: dict[str, tuple[str, str]] = dict()

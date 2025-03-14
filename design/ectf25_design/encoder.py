@@ -1,5 +1,5 @@
 from json import loads
-from base64 import urlsafe_b64decode
+from base64 import standard_b64decode
 from Crypto.Cipher import AES
 from argparse import ArgumentParser, FileType
 
@@ -15,7 +15,7 @@ class Encoder:
         secrets_data: dict[str, list[str]] = loads(secrets.decode("utf-8"))
         if any((len(secret_list) != 2 for secret_list in secrets_data.values())):
             raise ValueError("Found improper amount of secret pairs for channel")
-        self._secrets = {k: (urlsafe_b64decode(v[0]), urlsafe_b64decode(v[1]))
+        self._secrets = {k: (standard_b64decode(v[0]), standard_b64decode(v[1]))
                          for k, v in secrets_data.items()}
 
         # Secrets bounds checking

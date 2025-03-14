@@ -1,5 +1,5 @@
 from json import loads
-from base64 import urlsafe_b64decode
+from base64 import standard_b64decode
 from Crypto.Cipher import AES
 from argparse import ArgumentParser, FileType
 from pathlib import Path
@@ -13,7 +13,7 @@ def gen_subscription(secrets: bytes, device_id: int, start: int, end: int, chann
     if any((len(secret_list) != 2 for secret_list in secrets_data.values())):
         raise ValueError("Found improper amount of secret pairs for channel")
     secrets: dict[str, tuple[bytes, bytes]] = {k:
-                                               (urlsafe_b64decode(v[0]), urlsafe_b64decode(v[1]))
+                                               (standard_b64decode(v[0]), standard_b64decode(v[1]))
                                                for k, v in secrets_data.items()}
 
     # Secrets bounds checking

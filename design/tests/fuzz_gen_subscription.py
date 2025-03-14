@@ -1,7 +1,7 @@
 # flake8: noqa
 from pythonfuzz.main import PythonFuzz
 from json import loads
-from base64 import urlsafe_b64decode
+from base64 import standard_b64decode
 from Crypto.Cipher import AES
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -57,7 +57,7 @@ def output_verifier(gen_subscription_output: bytes,
     # Recover secrets
     secrets_data: dict[str, list[str]] = loads(secrets.decode("utf-8"))
     secrets: dict[str, tuple[bytes, bytes]] = {k:
-                                               (urlsafe_b64decode(v[0]), urlsafe_b64decode(v[1]))
+                                               (standard_b64decode(v[0]), standard_b64decode(v[1]))
                                                for k, v in secrets_data.items()}
 
     # Decrypt package master layer
