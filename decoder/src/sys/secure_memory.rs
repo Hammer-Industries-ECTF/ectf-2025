@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use core::slice::Iter;
+use alloc::vec::Vec;
 
 use hal::aes::{AesBlock, AesKey};
 use hal::flc::Flc;
@@ -49,94 +49,130 @@ extern "C" {
 const SUBSCRIPTIONS_CAPACITY: usize = 8;
 const SECRETS_CAPACITY: usize = 128;
 
-fn find_const_time<P, T>(mut it: Iter<T>, predicate: P) -> Option<T>
-where
-    T: Sized + Copy,
-    P: Fn(&T) -> bool,
-{
-    let mut item = None;
-    while let Some(x) = it.next() {
-        if predicate(x) {
-            item = Some(*x);
+pub fn retrieve_subscription(flc: &Flc, channel_id: u32) -> Result<Option<Subscription>, SecureMemoryError> {
+    let mut subscription: Option<Subscription> = None;
+    for i in 0..SUBSCRIPTIONS_CAPACITY {
+        unsafe {
+            let sub = flc.read_t::<Subscription>(subscriptions_address + (i * size_of::<Subscription>()) as u32);
+            if sub.is_err() { return Err(SecureMemoryError::FlashError(sub.unwrap_err())); }
+            let sub = sub.unwrap();
+            if sub.valid && sub.channel_id == channel_id {
+                subscription = Some(sub)
+            }
         }
     }
-    item
+    Ok(subscription)
 }
 
-fn position_const_time<P, T>(it: Iter<T>, predicate: P) -> Option<usize>
-where
-    T: Sized,
-    P: Fn(&T) -> bool,
-{
-    let mut index = None;
-    let mut enumit = it.enumerate();
-    while let Some((i, x)) = enumit.next() {
-        if predicate(x) {
-            index = Some(i);
-        }
-    }
-    index
-}
-
-fn retrieve_subscriptions_array(flc: &Flc) -> Result<[Subscription; SUBSCRIPTIONS_CAPACITY], SecureMemoryError> {
+pub fn retrieve_subscriptions(flc: &Flc) -> Result<Vec<Subscription>, SecureMemoryError> {
     unsafe {
         let subscriptions = flc.read_t::<[Subscription; SUBSCRIPTIONS_CAPACITY]>(subscriptions_address);
         if subscriptions.is_err() { return Err(SecureMemoryError::FlashError(subscriptions.unwrap_err())); }
-        Ok(subscriptions.unwrap())
+        Ok(subscriptions.unwrap().to_vec())
     }
-}
-
-pub fn retrieve_subscription(flc: &Flc, channel_id: u32) -> Result<Option<Subscription>, SecureMemoryError> {
-    let subscriptions = retrieve_subscriptions(flc);
-    if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
-    Ok(find_const_time(subscriptions.unwrap().iter(), |sub| sub.valid && sub.channel_id == channel_id))
-}
-
-pub fn retrieve_subscriptions(flc: &Flc) -> Result<alloc::vec::Vec<Subscription>, SecureMemoryError> {
-    let subscriptions = retrieve_subscriptions_array(flc);
-    if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
-    Ok(subscriptions.unwrap().to_vec())
 }
 
 pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(), SecureMemoryError> {
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    enum Slot {
+        Empty(usize),
+        Existing(usize),
+        Full
+    }
+
     if subscription.channel_id == 0 { return Err(SecureMemoryError::InvalidSubscriptionChannel(subscription.channel_id)); }
     if !subscription.valid { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
     if subscription.end < subscription.start { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
-    let subscriptions = retrieve_subscriptions_array(flc);
-    if subscriptions.is_err() { return Err(subscriptions.unwrap_err()); }
-    let subscriptions = subscriptions.unwrap();
-    let open_slot = position_const_time(subscriptions.iter(), |x| !x.valid || (x.valid && x.channel_id == subscription.channel_id));
-    if open_slot.is_none() { return Err(SecureMemoryError::SubscriptionMemoryFull); }
-    let open_slot = open_slot.unwrap();
-    unsafe {
-        let open_address: u32 = subscriptions_address + (open_slot * (size_of::<Subscription>())) as u32;
-        let data: [u32; size_of::<Subscription>() / 4] = core::mem::transmute(subscription);
-        match flc.write_u32_slice(open_address, &data) {
-            Ok(()) => Ok(()),
-            Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
+    let mut slot = Slot::Full;
+    for i in 0..SUBSCRIPTIONS_CAPACITY {
+        let mut this_slot = Slot::Full;
+        unsafe {
+            let sub = flc.read_t::<Subscription>(subscriptions_address + (i * size_of::<Subscription>()) as u32);
+            if sub.is_err() { return Err(SecureMemoryError::FlashError(sub.unwrap_err())); }
+            let sub = sub.unwrap();
+            if !sub.valid { this_slot = Slot::Empty(i); }
+            if sub.valid && sub.channel_id == subscription.channel_id { this_slot = Slot::Existing(i); }
+        }
+        match slot {
+            Slot::Full => {
+                if this_slot == Slot::Full {
+                    slot = this_slot;
+                } else {
+                    slot = this_slot;
+                }
+            },
+            Slot::Empty(_) => {
+                if this_slot == Slot::Full {
+                    slot = slot;
+                } else {
+                    slot = this_slot;
+                }
+            },
+            Slot::Existing(_) => {
+                if this_slot == Slot::Full {
+                    slot = slot;
+                } else {
+                    slot = slot;
+                }
+            }
         }
     }
-}
 
-fn retrieve_secrets_array(flc: &Flc) -> Result<[Secret; SECRETS_CAPACITY], SecureMemoryError> {
-    unsafe {
-        let secrets = flc.read_t::<[Secret; SECRETS_CAPACITY]>(secrets_address);
-        if secrets.is_err() { return Err(SecureMemoryError::FlashError(secrets.unwrap_err())); }
-        Ok(secrets.unwrap())
+    match slot {
+        Slot::Full => {
+            Err(SecureMemoryError::SubscriptionMemoryFull)
+        },
+        Slot::Empty(i) => {
+            unsafe {
+                let open_address: u32 = subscriptions_address + (i * (size_of::<Subscription>())) as u32;
+                let data: [u32; size_of::<Subscription>() / 4] = core::mem::transmute(subscription);
+                match flc.write_u32_slice(open_address, &data) {
+                    Ok(()) => Ok(()),
+                    Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
+                }
+            }
+        },
+        Slot::Existing(i) => {
+            unsafe {
+                let open_address: u32 = subscriptions_address + (i * (size_of::<Subscription>())) as u32;
+                let data: [u32; size_of::<Subscription>() / 4] = core::mem::transmute(subscription);
+                match flc.write_u32_slice(open_address, &data) {
+                    Ok(()) => Ok(()),
+                    Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
+                }
+            }
+        }
     }
 }
 
 pub fn retrieve_channel_secret(flc: &Flc, channel_id: u32) -> Result<Option<Secret>, SecureMemoryError> {
-    let secrets = retrieve_secrets_array(flc);
-    if secrets.is_err() { return Err(secrets.unwrap_err()); }
-    Ok(find_const_time(secrets.unwrap().iter(), |sec| sec.valid && sec.secret_type == SecretType::Channel(channel_id)))
+    let mut secret: Option<Secret> = None;
+    for i in 0..SECRETS_CAPACITY {
+        unsafe {
+            let sec = flc.read_t::<Secret>(secrets_address + (i * size_of::<Secret>()) as u32);
+            if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
+            let sec = sec.unwrap();
+            if sec.valid && sec.secret_type == SecretType::Channel(channel_id) {
+                secret = Some(sec)
+            }
+        }
+    }
+    Ok(secret)
 }
 
 pub fn retrieve_master_secret(flc: &Flc) -> Result<Secret, SecureMemoryError> {
-    let secrets = retrieve_secrets_array(flc);
-    if secrets.is_err() { return Err(secrets.unwrap_err()); }
-    let master_secret = find_const_time(secrets.unwrap().iter(), |sec| sec.valid && sec.secret_type == SecretType::Master);
-    match master_secret {
+    let mut secret: Option<Secret> = None;
+    for i in 0..SECRETS_CAPACITY {
+        unsafe {
+            let sec = flc.read_t::<Secret>(secrets_address + (i * size_of::<Secret>()) as u32);
+            if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
+            let sec = sec.unwrap();
+            if sec.valid && sec.secret_type == SecretType::Master {
+                secret = Some(sec)
+            }
+        }
+    }
+    match secret {
         Some(master_secret) => Ok(master_secret),
         None => Err(SecureMemoryError::NoMasterSecret)
     }

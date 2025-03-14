@@ -75,82 +75,82 @@ fn main() {
     // Set the linker script to the one provided by cortex-m-rt.
     println!("cargo:rustc-link-arg=-Tlink.x");
 
-    //==================================//
-    // Add secrets during build process //
-    //==================================//
-    // Read the secrets JSON file
-    todo!("Check path against docker command");
-    let secrets_path = Path::new("../secrets.json");
-    let secrets_str = fs::read_to_string(secrets_path).expect("Failed to read secrets.json");
+    // //==================================//
+    // // Add secrets during build process //
+    // //==================================//
+    // // Read the secrets JSON file
+    // todo!("Check path against docker command");
+    // let secrets_path = Path::new("../secrets.json");
+    // let secrets_str = fs::read_to_string(secrets_path).expect("Failed to read secrets.json");
 
-    // Parse secrets JSON
-    let secrets: Value = serde_json::from_str(&secrets_str).expect("Invalid JSON format");
-    let secrets_map = match secrets {
-        Value::Object(map) => { map },
-        _ => { panic!("Invalid JSON format") },
-    };
+    // // Parse secrets JSON
+    // let secrets: Value = serde_json::from_str(&secrets_str).expect("Invalid JSON format");
+    // let secrets_map = match secrets {
+    //     Value::Object(map) => { map },
+    //     _ => { panic!("Invalid JSON format") },
+    // };
 
-    let mut raw_secrets_vec = Vec::<RawSecret>::new();
-    for (id, value) in secrets_map.into_iter() {
-        let value_vec = match value {
-            Value::Array(vec) => { vec },
-            _ => { panic!("Invalid JSON format") },
-        };
+    // let mut raw_secrets_vec = Vec::<RawSecret>::new();
+    // for (id, value) in secrets_map.into_iter() {
+    //     let value_vec = match value {
+    //         Value::Array(vec) => { vec },
+    //         _ => { panic!("Invalid JSON format") },
+    //     };
 
-        let aes_key = match value_vec.get(0).unwrap() {
-            Value::String(s) => { s.to_string() },
-            _ => { panic!("Invalid JSON format") },
-        };
+    //     let aes_key = match value_vec.get(0).unwrap() {
+    //         Value::String(s) => { s.to_string() },
+    //         _ => { panic!("Invalid JSON format") },
+    //     };
 
-        let iv = match value_vec.get(1).unwrap() {
-            Value::String(s) => { s.to_string() },
-            _ => { panic!("Invalid JSON format") },
-        };
+    //     let iv = match value_vec.get(1).unwrap() {
+    //         Value::String(s) => { s.to_string() },
+    //         _ => { panic!("Invalid JSON format") },
+    //     };
 
-        let secret_arr = RawSecret {
-            id: id, 
-            aes_key: base64_url::decode(&aes_key).unwrap(),
-            iv: base64_url::decode(&iv).unwrap(),
-        };
+    //     let secret_arr = RawSecret {
+    //         id: id, 
+    //         aes_key: base64_url::decode(&aes_key).unwrap(),
+    //         iv: base64_url::decode(&iv).unwrap(),
+    //     };
 
-        assert_eq!(secret_arr.aes_key.len(), 16);
-        assert_eq!(secret_arr.iv.len(), 8);
+    //     assert_eq!(secret_arr.aes_key.len(), 16);
+    //     assert_eq!(secret_arr.iv.len(), 8);
 
-        raw_secrets_vec.push(secret_arr);
-    }
+    //     raw_secrets_vec.push(secret_arr);
+    // }
 
-    // Prevent overfilling flash on build
-    assert!(raw_secrets_vec.len() < 128);
+    // // Prevent overfilling flash on build
+    // assert!(raw_secrets_vec.len() < 128);
 
-    let mut secrets_vec = Vec::<Secret>::new();
-    for raw_secret in raw_secrets_vec {
-        let secret_type = match raw_secret.id.as_str() {
-            "master" => { SecretType::Master }
-            _ => { SecretType::Channel(raw_secret.id.parse::<u32>().unwrap()) }
-        };
+    // let mut secrets_vec = Vec::<Secret>::new();
+    // for raw_secret in raw_secrets_vec {
+    //     let secret_type = match raw_secret.id.as_str() {
+    //         "master" => { SecretType::Master }
+    //         _ => { SecretType::Channel(raw_secret.id.parse::<u32>().unwrap()) }
+    //     };
 
-        let secret = Secret {
-            secret_type: secret_type,
-            valid: true,
-            aes_key: raw_secret.aes_key.try_into().unwrap(),
-            aes_iv: raw_secret.iv.try_into().unwrap(),
-        };
+    //     let secret = Secret {
+    //         secret_type: secret_type,
+    //         valid: true,
+    //         aes_key: raw_secret.aes_key.try_into().unwrap(),
+    //         aes_iv: raw_secret.iv.try_into().unwrap(),
+    //     };
 
-        secrets_vec.push(secret);
-    }
+    //     secrets_vec.push(secret);
+    // }
 
-    let mut secrets_arr: [Secret; 128] = [
-        Secret {
-            secret_type: SecretType::Channel(u32::MAX),
-            valid: false,
-            aes_key: [0xFFu8; 32],
-            aes_iv: [0xFFu8; 16],
-        }; 128];
+    // let mut secrets_arr: [Secret; 128] = [
+    //     Secret {
+    //         secret_type: SecretType::Channel(u32::MAX),
+    //         valid: false,
+    //         aes_key: [0xFFu8; 32],
+    //         aes_iv: [0xFFu8; 16],
+    //     }; 128];
 
-    for (sidx, secret) in secrets_vec.into_iter().enumerate() {
-        secrets_arr[sidx] = secret;
-    }
+    // for (sidx, secret) in secrets_vec.into_iter().enumerate() {
+    //     secrets_arr[sidx] = secret;
+    // }
 
-    todo!("Decoder ID load from environ var");
+    // todo!("Decoder ID load from environ var");
     
 }
