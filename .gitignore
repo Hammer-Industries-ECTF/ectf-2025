@@ -3,3 +3,4 @@
 crashes/
 test/
 **/*.egg-info/
+secrets.json
