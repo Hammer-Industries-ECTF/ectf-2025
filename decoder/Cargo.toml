@@ -33,3 +33,14 @@ serde_json = "1.0.140"
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7.5", features = ["set-sp", "set-vtor"] }
 max7800x-hal = { version = "0.7.0", git = "https://github.com/Hammer-Industries-ECTF/max7800x-hal" }
+<<<<<<< HEAD
+=======
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+strip = true
+opt-level = "z"  # Optimize for size.
+lto = true
+>>>>>>> 28f21d7ca41543a327f18415f44a050827eb05d9
