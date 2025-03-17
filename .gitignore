@@ -4,3 +4,5 @@ crashes/
 test/
 **/*.egg-info/
 secrets.json
+decoder/generated.rs
+decoder/src/sys/generated_flash.rs

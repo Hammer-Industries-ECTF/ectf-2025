@@ -10,18 +10,15 @@
 //!
 //! The build script also sets the linker flags to tell it which link script to use.
 
-use std::default;
+use base64::prelude::*;
 use std::env;
 use std::convert::TryInto;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::os::raw;
 use std::path::PathBuf;
 use std::path::Path;
-use serde::Deserialize;
 use serde_json;
-use serde_json::Map;
 use serde_json::Value;
 
 struct RawSecret {
@@ -110,16 +107,16 @@ fn main() {
             _ => { panic!("Invalid JSON format") },
         };
 
-        println!("cargo:warning=AES_KEY = {}", &aes_key);
+        // println!("cargo:warning=AES_KEY = {}", &aes_key);
 
         let secret_arr = RawSecret {
             id: id, 
-            aes_key: base64_url::decode(&aes_key).unwrap(),
-            iv: base64_url::decode(&iv).unwrap(),
+            aes_key: BASE64_STANDARD.decode(&aes_key).unwrap(),
+            iv: BASE64_STANDARD.decode(&iv).unwrap(),
         };
 
-        assert_eq!(secret_arr.aes_key.len(), 16);
-        assert_eq!(secret_arr.iv.len(), 8);
+        assert_eq!(secret_arr.aes_key.len(), 32);
+        assert_eq!(secret_arr.iv.len(), 16);
 
         raw_secrets_vec.push(secret_arr);
     }
@@ -155,10 +152,12 @@ fn main() {
     let mut code_secrets_vec = Vec::<String>::new();
     for (sidx, secret) in secrets_vec.into_iter().enumerate() {
         secrets_arr[sidx] = secret;
+    }
 
+    for  secret in secrets_arr {
         let code_secret_type = match secret.secret_type {
             SecretType::Master          => { format!("SecretType::Master") },
-            SecretType::Channel(c) => { format!("SecretType::Channel({})", c) }, 
+            SecretType::Channel(c) => { format!("SecretType::Channel(0x{:08x}u32)", c) }, 
         };
 
         let code_valid = match secret.valid {
@@ -174,7 +173,7 @@ fn main() {
         code_aes_key.push(']');
 
         let mut code_aes_iv: String = String::from("["); 
-        for aes_iv_byte in secret.aes_key {
+        for aes_iv_byte in secret.aes_iv {
             let code_aes_iv_byte = format!("0x{:02x}u8, ", aes_iv_byte);
             code_aes_iv.push_str(&code_aes_iv_byte);
         }
@@ -191,48 +190,49 @@ fn main() {
     let code_secrets_arr = code_secrets_vec.join("\n");
 
     let code_header = r#"//! Flash Secrets
-    use super::secure_memory::{Secret, SecretType, Subscription};"#;
+use super::secure_memory::{Secret, SecretType, Subscription};"#;
 
     let code_subscriptions = r#"    
-    #[link_section = ".subscriptions"]
-    #[no_mangle]
-    static mut SUBSCRIPTIONS: [Subscription; 8] = [
-        Subscription{
-            channel_id: 0,
-            valid: false,
-            end: 0,
-            start: 0
-        }; 8
-    ];"#;
+#[link_section = ".subscriptions"]
+#[no_mangle]
+static mut SUBSCRIPTIONS: [Subscription; 8] = [
+    Subscription{
+        channel_id: 0,
+        valid: false,
+        end: 0,
+        start: 0
+    }; 8
+];"#;
 
-    let code_decoder_id = format!(r#"
-    #[link_section = ".decoder_id"]
-    #[no_mangle]
-    static DECODER_ID: u32 = 0x{:08x}u32;
-    "#, decoder_id);
+    let code_decoder_id: String = format!(r#"
+#[link_section = ".decoder_id_address"]
+#[no_mangle]
+static DECODER_ID: u32 = 0x{:08x}u32;
+"#, decoder_id);
 
     let final_code = format!(
-        r#"
-        {}
+r#"
+{}
 
-        {}
+{}
 
-        #[link_section = ".channel_secrets"]
-        #[no_mangle]
-        static SECRETS: [Secret; 128] = [
-            {}
-        ];
+{}
 
-        {}
-        "#,
+#[link_section = ".secrets_address"]
+#[no_mangle]
+static SECRETS: [Secret; 128] = [
+{}
+];
+"#,
         code_header,
         code_subscriptions,
-        code_secrets_arr,
         code_decoder_id,
+        code_secrets_arr,
     );
 
-    let flash_code_path = Path::new(&out).join("generated.rs");
+    let flash_code_path = Path::new("src/sys/generated_flash.rs");
     fs::write(&flash_code_path, final_code).unwrap();
     println!("cargo:rerun-if-changed=../secrets.json");
-    
+    println!("cargo:rerun-if-changed=build.rs");
+    // println!("cargo:warning={}", flash_code_path.to_str().unwrap())    
 }

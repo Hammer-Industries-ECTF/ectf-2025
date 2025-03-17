@@ -38,6 +38,7 @@ SECTIONS {
     .subscriptions : {
         subscriptions_address = .;
         KEEP(*(.subscriptions)) /* Ensure it's not removed */
+        KEEP(*(.subscriptions_address))
     } > SUBSCRIPTIONS
 
     .secrets : {
@@ -46,8 +47,8 @@ SECTIONS {
         secrets_address = .;
 
         KEEP(*(.secrets))
-        /* KEEP(*(.decoder_id))
-        KEEP(*(.channel_secrets)) */
+        KEEP(*(.decoder_id_address))
+        KEEP(*(.secrets_address)) 
     } > SECRETS
 }
 
