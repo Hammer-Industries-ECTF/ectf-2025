@@ -193,9 +193,8 @@ fn main() {
 use super::secure_memory::{Secret, SecretType, Subscription};"#;
 
     let code_subscriptions = r#"    
-// #[link_section = ".subscriptions"]
-#[no_mangle]
-pub static mut SUBSCRIPTIONS: [Subscription; 8] = [
+#[link_section = ".subscriptions"]
+pub static SUBSCRIPTIONS: [Subscription; 8] = [
     Subscription{
         channel_id: 0,
         valid: false,

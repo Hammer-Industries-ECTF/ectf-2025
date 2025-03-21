@@ -3,9 +3,9 @@ MEMORY {
     ROM           (rx) : ORIGIN = 0x00000000, LENGTH = 0x00010000 /* 64kB ROM */
     BOOTLOADER    (rx) : ORIGIN = 0x10000000, LENGTH = 0x0000E000 /* Bootloader flash */
     START_FLASH   (rx) : ORIGIN = 0x1000E000, LENGTH = 0x0000020C /* start flash to work with bootloader and rust toolchain */
-    FLASH         (rx) : ORIGIN = 0x1000E20C, LENGTH = 0x00037E04 /* Location of team firmware, skipping 200 bytes to make it work for this toolchain */
+    FLASH         (rx) : ORIGIN = 0x1000E20C, LENGTH = 0x00035E04 /* Location of team firmware, skipping 200 bytes to make it work for this toolchain */
+    SUBSCRIPTIONS (r)  : ORIGIN = 0x10036000, LENGTH = 0x00002000 /* Subscriptions */
     RESERVED      (rw) : ORIGIN = 0x10046000, LENGTH = 0x00038000 /* Reserved */
-    SUBSCRIPTIONS (rw) : ORIGIN = 0x1007A000, LENGTH = 0x00002000 /* Reserved */
     DECODER_ID    (r)  : ORIGIN = 0x1007C000, LENGTH = 0x00000010 /* Reserved */
     SECRETS       (r)  : ORIGIN = 0x1007C010, LENGTH = 0x00001FF0 /* Reserved */
     ROM_BL_PAGE   (rw) : ORIGIN = 0x1007E000, LENGTH = 0x00002000 /* Reserved */
@@ -37,10 +37,19 @@ SECTIONS {
     } > START_FLASH
 
     .subscriptions : {
-        subscriptions_address = .;
+        _subscriptions_page_start = .;
+        *(.subscriptions)
+        _subscriptions_page_end = .;
+
         KEEP(*(.subscriptions)) /* Ensure it's not removed */
-        KEEP(*(.subscriptions_address))
     } > SUBSCRIPTIONS
+
+    /* .data_flash_page1 :
+    /* {
+    /*     _data_flash_page1_start = .;
+    /*     *(.data_flash_page1)
+    /*     _data_flash_page1_end = .;
+    /* } > FLASH_PAGE1 */
 
     .decoder_id : {
         decoder_id_address = .;
