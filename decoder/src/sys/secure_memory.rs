@@ -26,6 +26,7 @@ pub struct Subscription {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C, align(4))]
 pub enum SecretType {
     Channel(u32),
     Master

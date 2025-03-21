@@ -193,9 +193,9 @@ fn main() {
 use super::secure_memory::{Secret, SecretType, Subscription};"#;
 
     let code_subscriptions = r#"    
-#[link_section = ".subscriptions"]
+// #[link_section = ".subscriptions"]
 #[no_mangle]
-static mut SUBSCRIPTIONS: [Subscription; 8] = [
+pub static mut SUBSCRIPTIONS: [Subscription; 8] = [
     Subscription{
         channel_id: 0,
         valid: false,
@@ -205,9 +205,9 @@ static mut SUBSCRIPTIONS: [Subscription; 8] = [
 ];"#;
 
     let code_decoder_id: String = format!(r#"
-#[link_section = ".decoder_id_address"]
+// #[link_section = ".decoder_id_address"]
 #[no_mangle]
-static DECODER_ID: u32 = 0x{:08x}u32;
+pub static DECODER_ID: u32 = 0x{:08x}u32;
 "#, decoder_id);
 
     let final_code = format!(
@@ -218,9 +218,9 @@ r#"
 
 {}
 
-#[link_section = ".secrets_address"]
+// #[link_section = ".secrets_address"]
 #[no_mangle]
-static SECRETS: [Secret; 128] = [
+pub static SECRETS: [Secret; 128] = [
 {}
 ];
 "#,
