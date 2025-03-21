@@ -12,6 +12,8 @@ pub enum SecureMemoryError {
     InvalidSubscriptionChannel(u32),
     SubscriptionNotValid(u32),
     SubscriptionMemoryFull,
+    NoSubscription,
+    NoChannelSecret,
     NoMasterSecret,
     FlashError(FlashError)
 }
@@ -41,40 +43,31 @@ pub struct Secret {
     pub aes_iv: AesBlock
 }
 
-// extern "C" {
-//     static subscriptions_address: u32;
-//     static decoder_id_address: u32;
-//     static secrets_address: u32;
-// }
-
-static subscriptions_address: u32 = 0x1007a000;
-static decoder_id_address: u32 = 0x1007c000;
-static secrets_address: u32 = 0x1007c004;
+use super::generated_flash::{SUBSCRIPTIONS, DECODER_ID, SECRETS};
 
 const SUBSCRIPTIONS_CAPACITY: usize = 8;
 const SECRETS_CAPACITY: usize = 128;
 
-pub fn retrieve_subscription(flc: &Flc, channel_id: u32) -> Result<Option<Subscription>, SecureMemoryError> {
+pub fn retrieve_subscription(flc: &Flc, channel_id: u32) -> Result<Subscription, SecureMemoryError> {
     let mut subscription: Option<Subscription> = None;
     for i in 0..SUBSCRIPTIONS_CAPACITY {
-        unsafe {
-            let sub = flc.read_t::<Subscription>(subscriptions_address + (i * size_of::<Subscription>()) as u32);
-            if sub.is_err() { return Err(SecureMemoryError::FlashError(sub.unwrap_err())); }
-            let sub = sub.unwrap();
-            if sub.valid && sub.channel_id == channel_id {
-                subscription = Some(sub)
-            }
+        let sub = flc.read_t::<Subscription>(&SUBSCRIPTIONS as *const _ as u32 + (i * size_of::<Subscription>()) as u32);
+        if sub.is_err() { return Err(SecureMemoryError::FlashError(sub.unwrap_err())); }
+        let sub = sub.unwrap();
+        if sub.valid && sub.channel_id == channel_id {
+            subscription = Some(sub)
         }
     }
-    Ok(subscription)
+    match subscription {
+        Some(sub) => Ok(sub),
+        None => Err(SecureMemoryError::NoSubscription)
+    }
 }
 
 pub fn retrieve_subscriptions(flc: &Flc) -> Result<Vec<Subscription>, SecureMemoryError> {
-    unsafe {
-        let subscriptions = flc.read_t::<[Subscription; SUBSCRIPTIONS_CAPACITY]>(subscriptions_address);
-        if subscriptions.is_err() { return Err(SecureMemoryError::FlashError(subscriptions.unwrap_err())); }
-        Ok(subscriptions.unwrap().to_vec())
-    }
+    let subscriptions = flc.read_t::<[Subscription; SUBSCRIPTIONS_CAPACITY]>(&SUBSCRIPTIONS as *const _ as u32);
+    if subscriptions.is_err() { return Err(SecureMemoryError::FlashError(subscriptions.unwrap_err())); }
+    Ok(subscriptions.unwrap().to_vec())
 }
 
 pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(), SecureMemoryError> {
@@ -136,9 +129,9 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
             subscription_array.copy_from_slice(subscriptions.as_slice());
             unsafe {
                 let data: [u32; SUBSCRIPTIONS_CAPACITY * size_of::<Subscription>() / 4] = core::mem::transmute(subscription_array);
-                let ret = flc.erase_page(subscriptions_address);
+                let ret = flc.erase_page(&SUBSCRIPTIONS as *const _ as u32);
                 if ret.is_err() { return Err(SecureMemoryError::FlashError(ret.unwrap_err())); }
-                match flc.write_u32_slice(subscriptions_address, &data) {
+                match flc.write_u32_slice(&SUBSCRIPTIONS as *const _ as u32, &data) {
                     Ok(()) => Ok(()),
                     Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
                 }
@@ -157,9 +150,9 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
             subscription_array.copy_from_slice(subscriptions.as_slice());
             unsafe {
                 let data: [u32; SUBSCRIPTIONS_CAPACITY * size_of::<Subscription>() / 4] = core::mem::transmute(subscription_array);
-                let ret = flc.erase_page(subscriptions_address);
+                let ret = flc.erase_page(&SUBSCRIPTIONS as *const _ as u32);
                 if ret.is_err() { return Err(SecureMemoryError::FlashError(ret.unwrap_err())); }
-                match flc.write_u32_slice(subscriptions_address, &data) {
+                match flc.write_u32_slice(&SUBSCRIPTIONS as *const _ as u32, &data) {
                     Ok(()) => Ok(()),
                     Err(flash_error) => Err(SecureMemoryError::FlashError(flash_error))
                 }
@@ -168,31 +161,30 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
     }
 }
 
-pub fn retrieve_channel_secret(flc: &Flc, channel_id: u32) -> Result<Option<Secret>, SecureMemoryError> {
+pub fn retrieve_channel_secret(flc: &Flc, channel_id: u32) -> Result<Secret, SecureMemoryError> {
     let mut secret: Option<Secret> = None;
     for i in 0..SECRETS_CAPACITY {
-        unsafe {
-            let sec = flc.read_t::<Secret>(secrets_address + (i * size_of::<Secret>()) as u32);
-            if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
-            let sec = sec.unwrap();
-            if sec.valid && sec.secret_type == SecretType::Channel(channel_id) {
-                secret = Some(sec)
-            }
+        let sec = flc.read_t::<Secret>(&SECRETS as *const _ as u32 + (i * size_of::<Secret>()) as u32);
+        if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
+        let sec = sec.unwrap();
+        if sec.valid && sec.secret_type == SecretType::Channel(channel_id) {
+            secret = Some(sec)
         }
     }
-    Ok(secret)
+    match secret {
+        Some(channel_secret) => Ok(channel_secret),
+        None => Err(SecureMemoryError::NoChannelSecret)
+    }
 }
 
 pub fn retrieve_master_secret(flc: &Flc) -> Result<Secret, SecureMemoryError> {
     let mut secret: Option<Secret> = None;
     for i in 0..SECRETS_CAPACITY {
-        unsafe {
-            let sec = flc.read_t::<Secret>(secrets_address + (i * size_of::<Secret>()) as u32);
-            if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
-            let sec = sec.unwrap();
-            if sec.valid && sec.secret_type == SecretType::Master {
-                secret = Some(sec)
-            }
+        let sec = flc.read_t::<Secret>(&SECRETS as *const _ as u32 + (i * size_of::<Secret>()) as u32);
+        if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
+        let sec = sec.unwrap();
+        if sec.valid && sec.secret_type == SecretType::Master {
+            secret = Some(sec)
         }
     }
     match secret {
@@ -202,9 +194,7 @@ pub fn retrieve_master_secret(flc: &Flc) -> Result<Secret, SecureMemoryError> {
 }
 
 pub fn verify_decoder_id(flc: &Flc, decoder_id: u32) -> Result<bool, SecureMemoryError> {
-    unsafe {
-        let saved_decoder_id = flc.read_32(decoder_id_address);
-        if saved_decoder_id.is_err() { return Err(SecureMemoryError::FlashError(saved_decoder_id.unwrap_err())); }
-        Ok(saved_decoder_id.unwrap() == decoder_id)
-    }
+    let saved_decoder_id = flc.read_32(&DECODER_ID as *const _ as u32);
+    if saved_decoder_id.is_err() { return Err(SecureMemoryError::FlashError(saved_decoder_id.unwrap_err())); }
+    Ok(saved_decoder_id.unwrap() == decoder_id)
 }

@@ -35,8 +35,6 @@ pub fn decrypt_decoder_id(flc: &Flc, aes: &Aes, channel_id: u32, block: AesBlock
     let secret = retrieve_channel_secret(flc, channel_id);
     if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
     let secret = secret.unwrap();
-    if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
-    let secret = secret.unwrap();
     let decoded_block = decrypt_block(aes, secret, block)?;
     let decoder_id = extract_decoder_id(decoded_block);
     if decoder_id.is_err() { return Err(DecryptError::PacketError(decoder_id.unwrap_err())); }
@@ -47,16 +45,12 @@ pub fn decrypt_company_stamp(flc: &Flc, aes: &Aes, channel_id: u32, block: AesBl
     let secret = retrieve_channel_secret(flc, channel_id);
     if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
     let secret = secret.unwrap();
-    if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
-    let secret = secret.unwrap();
     decrypt_block(aes, secret, block)
 }
 
 pub fn decrypt_frame(flc: &Flc, aes: &Aes, channel_id: u32, blocks: Vec<AesBlock>) -> Result<Vec<u8>, DecryptError> {
     let secret = retrieve_channel_secret(flc, channel_id);
     if secret.is_err() { return Err(DecryptError::SecureMemoryError(secret.unwrap_err())); }
-    let secret = secret.unwrap();
-    if secret.is_none() { return Err(DecryptError::InvalidSecretChannel(channel_id)); }
     let secret = secret.unwrap();
     let mut decrypted_blocks = decrypt_blocks(aes, secret, blocks)?;
     decrypted_blocks.remove(0);

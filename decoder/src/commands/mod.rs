@@ -75,8 +75,6 @@ fn decode_message(flc: &Flc, aes: &Aes, message: HostDecodeMessage) -> Result<Re
         let subscription = retrieve_subscription(flc, message.channel_id);
         if subscription.is_err() { return Err(CommandError::SecureMemoryError(subscription.unwrap_err())); }
         let subscription = subscription.unwrap();
-        if subscription.is_none() { return Err(CommandError::InvalidSubscriptionChannel(message.channel_id)); }
-        let subscription = subscription.unwrap();
         if !subscription.valid { return Err(CommandError::NotSubscribed(message.channel_id)); }
         if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
         if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
