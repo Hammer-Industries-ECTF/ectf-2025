@@ -1,3 +1,5 @@
+//! Flash memory interface and timestamp tracker
+
 extern crate alloc;
 
 use alloc::vec::Vec;
@@ -5,6 +7,19 @@ use alloc::vec::Vec;
 use hal::aes::{AesBlock, AesKey};
 use hal::flc::Flc;
 use hal::flc::FlashError;
+
+// We need an unintialized state because time 0 must be
+// a valid packet on boot, however we cannot tell between
+// already receiving time 0 packet and not receiving any
+// packet yet with just a u64. If we chose to save the
+// next valid timestamp instead of the last received,
+// we would still need another state for after receiving
+// a packet with timestamp U64_MAX. 
+#[derive(Debug, Clone)]
+enum Timestamp {
+    Uninitialized,
+    CurrentTime(u64)
+}
 
 #[derive(Debug, Clone, Copy)]
 #[allow(unused)]
@@ -48,8 +63,24 @@ use super::generated_flash::{SUBSCRIPTIONS, DECODER_ID, SECRETS};
 const SUBSCRIPTIONS_CAPACITY: usize = 8;
 const SECRETS_CAPACITY: usize = 128;
 
+static mut TIMESTAMP: Timestamp = Timestamp::Uninitialized;
+
+pub fn verify_timestamp(frame_timestamp: u64) -> bool {
+    unsafe {
+        match TIMESTAMP {
+            Timestamp::Uninitialized => true,
+            Timestamp::CurrentTime(current_time) => current_time < frame_timestamp
+        }
+    }
+}
+
+pub fn set_timestamp(timestamp: u64) -> () {
+    unsafe { TIMESTAMP = Timestamp::CurrentTime(timestamp); }
+}
+
 pub fn retrieve_subscription(flc: &Flc, channel_id: u32) -> Result<Subscription, SecureMemoryError> {
     let mut subscription: Option<Subscription> = None;
+    // Constant time-ish search
     for i in 0..SUBSCRIPTIONS_CAPACITY {
         let sub = flc.read_t::<Subscription>(&SUBSCRIPTIONS as *const _ as u32 + (i * size_of::<Subscription>()) as u32);
         if sub.is_err() { return Err(SecureMemoryError::FlashError(sub.unwrap_err())); }
@@ -78,10 +109,16 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
         Full
     }
 
+    // Validate metadata
     if subscription.channel_id == 0 { return Err(SecureMemoryError::InvalidSubscriptionChannel(subscription.channel_id)); }
     if !subscription.valid { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
     if subscription.end < subscription.start { return Err(SecureMemoryError::SubscriptionNotValid(subscription.channel_id)); }
+    // Get all subscription data
     let mut subscriptions = retrieve_subscriptions(flc)?;
+    // Search for which slot to fill
+    // If all slots are valid and full, error
+    // If slot is valid and full but is the same channel number, overwrite
+    // Else, choose first empty slot
     let mut slot = Slot::Full;
     for (i, sub) in subscriptions.iter().enumerate() {
         let mut this_slot = Slot::Full;
@@ -112,6 +149,9 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
         }
     }
 
+    // Copy entire subscription data and overwrite specified slot
+    // Must copy entire data and overwrite it all because we must
+    // erase the entire flash page to write data
     match slot {
         Slot::Full => {
             Err(SecureMemoryError::SubscriptionMemoryFull)
@@ -163,6 +203,7 @@ pub fn overwrite_subscription(flc: &Flc, subscription: Subscription) -> Result<(
 
 pub fn retrieve_channel_secret(flc: &Flc, channel_id: u32) -> Result<Secret, SecureMemoryError> {
     let mut secret: Option<Secret> = None;
+    // Constant time-ish search
     for i in 0..SECRETS_CAPACITY {
         let sec = flc.read_t::<Secret>(&SECRETS as *const _ as u32 + (i * size_of::<Secret>()) as u32);
         if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }
@@ -179,6 +220,7 @@ pub fn retrieve_channel_secret(flc: &Flc, channel_id: u32) -> Result<Secret, Sec
 
 pub fn retrieve_master_secret(flc: &Flc) -> Result<Secret, SecureMemoryError> {
     let mut secret: Option<Secret> = None;
+    // Constant time-ish search
     for i in 0..SECRETS_CAPACITY {
         let sec = flc.read_t::<Secret>(&SECRETS as *const _ as u32 + (i * size_of::<Secret>()) as u32);
         if sec.is_err() { return Err(SecureMemoryError::FlashError(sec.unwrap_err())); }

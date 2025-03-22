@@ -1,4 +1,4 @@
-//! Transmitter Functions
+//! Transmitter functions
 
 use core::fmt::write;
 
