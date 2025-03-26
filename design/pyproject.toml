@@ -15,7 +15,7 @@ authors = [
     {name = "Eli Wood", email = "wood269@purdue.edu"}
 ]
 keywords = ["mitre", "ectf", "embedded", "security", "encoder", "aes", "purdue"]
-dependencies = ["pycryptodome>=3.21"]
+dependencies = ["pycryptodome>=3.21", "loguru"]
 
 [project.optional-dependencies]
 tests = ["pythonfuzz"]
