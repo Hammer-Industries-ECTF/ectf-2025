@@ -1,4 +1,4 @@
-//! Decrypter
+//! Decryption functions
 
 use core::iter::zip;
 

@@ -3,7 +3,7 @@
 //! Contains:
 //! - Initialization of Flash memory
 //! - Interupts / Handlers
-//! - System Watchdog (his name is Cupcake)
+//! - System Watchdog (his name is Cupcake) (Still awaiting shipment)
 
 pub mod allocator;
 pub mod secure_memory;

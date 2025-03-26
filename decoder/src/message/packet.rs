@@ -1,3 +1,5 @@
+//! Packet utility functions to extract metadata from raw AES blocks
+
 use core::iter::zip;
 
 use hal::aes::AesBlock;

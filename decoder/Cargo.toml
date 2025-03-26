@@ -1,11 +1,13 @@
 [package]
 name = "decoder"
-version = "1.0.0-alpha.0"
+version = "1.0.0"
 authors = ["Noah Rediker <nrediker@purdue.edu>", "Spencer Bowles <bowles7@purdue.edu>", "Aidan Jacobsen <jacobse7@purdue.edu>", "Eli Wood <wood269@purdue.edu>"]
 edition = "2021"
 rust-version = "1.68"
 description = "Hammer Industries' (Purdue2) decoder design for the MITRE eCTF 2025."
 readme = "README.md"
+repository = "https://github.com/Hammer-Industries-ECTF/ectf-2025"
+license-file = "LICENSE-MIT"
 keywords = ["mitre", "ectf", "embedded", "security", "decoder", "aes", "uart", "max78000", "purdue"]
 publish = false
 
@@ -15,12 +17,10 @@ targets = ["thumbv7em-none-eabihf"]
 [dependencies]
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7.5", features = ["set-sp", "set-vtor"] }
-cortex-m-semihosting = "0.5.0"
-#embedded-hal-nb = "1.0.0"
-#embedded-io = "0.6.1"
+#cortex-m-semihosting = "0.5.0"
 max7800x-hal = { version = "0.7.0", git = "https://github.com/Hammer-Industries-ECTF/max7800x-hal" }
-#panic-halt = "1.0.0"
-panic-semihosting = "0.6.0"
+panic-halt = "1.0.0"
+#panic-semihosting = "0.6.0"
 embedded-alloc = "0.6.0"
 # rand = { version = "0.9.0", use-default-features = false, features = ["no_std"] }
 rand_chacha = { version = "0.3", default-features = false }

@@ -1,7 +1,6 @@
 //! Message module
 //! Contains:
-//! - Information about message structure, encrypted and decrypted
-//! - Functions for transmitting and receiving data
+//! - Information about message structure: (Commands, Responses, and Metadata)
 
 pub mod receive;
 pub mod transmit;
