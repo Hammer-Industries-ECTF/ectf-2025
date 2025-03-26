@@ -81,11 +81,9 @@ fn main() {
     // Add secrets during build process //
     //==================================//
     // Read the secrets JSON file
-    // todo!("Decoder ID load from environ var");
-    let decoder_id: u32 = 0xDEAD_BEEF;
+    let decoder_id: u32 = u32::from_str_radix(&env::var("DECODER_ID").unwrap()[2..], 16).unwrap();
 
-    // todo!("Check path against docker command");
-    let secrets_path: &Path = Path::new("../secrets.json");
+    let secrets_path: &Path = Path::new("/global.secrets");
     let secrets_str = fs::read_to_string(secrets_path).expect("Failed to read secrets.json");
 
     // Parse secrets JSON
@@ -112,8 +110,6 @@ fn main() {
             _ => { panic!("Invalid JSON format") },
         };
 
-        // println!("cargo:warning=AES_KEY = {}", &aes_key);
-
         let secret_arr = RawSecret {
             id: id, 
             aes_key: BASE64_STANDARD.decode(&aes_key).unwrap(),
@@ -132,7 +128,7 @@ fn main() {
     // to a system of dynamically communicating channel secrets.
     // We figured if you are going to try more than 128 channels for this competition,
     // oh well.
-    assert!(raw_secrets_vec.len() < 128);
+    assert!(raw_secrets_vec.len() <= 128);
 
     // Transform RawSecrets from JSON into Secrets for flash
     let mut secrets_vec = Vec::<Secret>::new();
@@ -236,7 +232,6 @@ pub static SECRETS: [Secret; 128] = [
 
     let flash_code_path = Path::new("src/sys/generated_flash.rs");
     fs::write(&flash_code_path, final_code).unwrap();
-    println!("cargo:rerun-if-changed=../secrets.json");
-    println!("cargo:rerun-if-changed=build.rs");
-    // println!("cargo:warning={}", flash_code_path.to_str().unwrap())    
+    println!("cargo:rerun-if-changed=/global.secrets");
+    println!("cargo:rerun-if-changed=build.rs");    
 }
