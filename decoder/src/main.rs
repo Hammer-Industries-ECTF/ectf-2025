@@ -12,6 +12,7 @@ use hal::entry;
 use message::receive::receive_message;
 use message::transmit::{transmit_err, transmit_message};
 use commands::execute_command;
+use sys::rng::{new_rng, delay_rand};
 
 use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
 // use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
@@ -26,6 +27,7 @@ fn main() -> ! {
 
     // Get HAL and PAC references to on-board devices
     let p = pac::Peripherals::take().unwrap();
+    let core = pac::CorePeripherals::take().unwrap();
     let mut gcr = hal::gcr::Gcr::new(p.gcr, p.lpgcr);
     let ipo = hal::gcr::clocks::Ipo::new(gcr.osc_guards.ipo).enable(&mut gcr.reg);
     let clks = gcr.sys_clk
@@ -48,18 +50,27 @@ fn main() -> ! {
         .parity(hal::uart::ParityBit::None)
         .build();
 
+    // Initialize a delay timer using the ARM SYST (SysTick) peripheral
+    let rate = clks.sys_clk.frequency;
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, rate);
+
     let aes = hal::aes::Aes::new(
         p.aes,
         &mut gcr.reg
     );
 
     let flc = hal::flc::Flc::new(p.flc, clks.sys_clk);
+    let _simo = hal::simo::Simo::new(p.simo, &mut gcr.reg);
+    let trng = hal::trng::Trng::new(p.trng, &mut gcr.reg);
+    let mut rng = new_rng(trng);
 
     // Main loop
     // On TXError, no recourse possible, so start main loop over
     'message_loop: loop {
         // Receive command from host device
         let host_message = receive_message(&flc, &uart, &aes);
+        delay_rand(&mut rng, &mut delay);
+
         if host_message.is_err() {
             let _ = transmit_err(&uart, host_message.unwrap_err());
             continue 'message_loop;
