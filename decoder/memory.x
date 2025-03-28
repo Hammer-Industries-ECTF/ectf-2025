@@ -6,8 +6,6 @@ MEMORY {
     FLASH         (rx) : ORIGIN = 0x1000E20C, LENGTH = 0x00035E04 /* Location of team firmware, skipping 200 bytes to make it work for this toolchain */
     SUBSCRIPTIONS (r)  : ORIGIN = 0x10036000, LENGTH = 0x00002000 /* Subscriptions */
     RESERVED      (rw) : ORIGIN = 0x10046000, LENGTH = 0x00038000 /* Reserved */
-    DECODER_ID    (r)  : ORIGIN = 0x1007C000, LENGTH = 0x00000010 /* Reserved */
-    SECRETS       (r)  : ORIGIN = 0x1007C010, LENGTH = 0x00001FF0 /* Reserved */
     ROM_BL_PAGE   (rw) : ORIGIN = 0x1007E000, LENGTH = 0x00002000 /* Reserved */
     RAM           (rwx): ORIGIN = 0x20000000, LENGTH = 0x00020000 /* 128kB SRAM */
 }
@@ -43,25 +41,6 @@ SECTIONS {
 
         KEEP(*(.subscriptions)) /* Ensure it's not removed */
     } > SUBSCRIPTIONS
-
-    /* .data_flash_page1 :
-    /* {
-    /*     _data_flash_page1_start = .;
-    /*     *(.data_flash_page1)
-    /*     _data_flash_page1_end = .;
-    /* } > FLASH_PAGE1 */
-
-    .decoder_id : {
-        decoder_id_address = .;
-        KEEP(*(.decoder_id))
-        KEEP(*(.decoder_id_address))
-    } > DECODER_ID
-
-    .secrets : {
-        secrets_address = .;
-        KEEP(*(.secrets))
-        KEEP(*(.secrets_address)) 
-    } > SECRETS
 }
 
 /*https://github.com/mitre-cyber-academy/2025-ectf-insecure-example/blob/release/decoder/firmware.ld#L7*/
