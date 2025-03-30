@@ -93,7 +93,15 @@ fn decode_message(flc: &Flc, aes: &Aes, message: HostDecodeMessage) -> Result<Re
     // Decrypt frame data
     let decrypted_frame = decrypt_frame(flc, aes, message.channel_id, message.encrypted_frame);
     if decrypted_frame.is_err() { return Err(CommandError::DecryptError(decrypted_frame.unwrap_err())); }
-    let decrypted_frame = decrypted_frame.unwrap();
+    let mut decrypted_frame = decrypted_frame.unwrap();
+    // Validate frame length
+    if (decrypted_frame.len() as u32) < message.frame_length { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
+    if (decrypted_frame.len() as u32) - message.frame_length > 15 { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
+    while (decrypted_frame.len() as u32) > 0 && (decrypted_frame.len() as u32) > message.frame_length {
+        let excess = decrypted_frame.pop().unwrap();
+        if excess != 0 { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
+    }
+    if (decrypted_frame.len() as u32) != message.frame_length { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
     // Update timestamp and return
     set_timestamp(message.timestamp);
     Ok(ResponseDecodeMessage{frame: decrypted_frame})
