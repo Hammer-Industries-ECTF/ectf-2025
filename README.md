@@ -28,6 +28,7 @@ If you also want to debug the design (outside of Docker), you'll need
   - `pyproject.toml` - Pip import instructions
 - `frames/` - A series of frames for use with the MITRE tool suite
 - `tools/` - MITRE tool suite
+- `design_purdue2.pdf` - Design Documentation
 
 ## Example Flow
 Here is an example flow using frames from the `frames/` folder.
