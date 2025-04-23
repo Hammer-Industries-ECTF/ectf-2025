@@ -54,7 +54,8 @@ class Encoder:
                                                 self._secrets[str(channel)][1],
                                                 (self._company_stamp
                                                  + frame
-                                                 + (b'\x00' * pad_bytes_needed)))
+                                                 + (b'\x00' * pad_bytes_needed)
+                                                 + self._company_stamp))
         encoded_frame: bytes = _anti_cbc_encrypt(self._secrets["master"][0],
                                                  self._secrets["master"][1],
                                                  (timestamp.to_bytes(8, 'little')

@@ -1,6 +1,6 @@
 [package]
 name = "decoder"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Noah Rediker <nrediker@purdue.edu>", "Spencer Bowles <bowles7@purdue.edu>", "Aidan Jacobsen <jacobse7@purdue.edu>", "Eli Wood <wood269@purdue.edu>"]
 edition = "2021"
 rust-version = "1.68"

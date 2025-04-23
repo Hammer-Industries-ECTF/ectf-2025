@@ -24,7 +24,8 @@ pub enum CommandError {
     SubscriptionPast(u32, u64),
     InvalidDecoderID,
     FramePast(u64),
-    FrameLengthIncorrect(u32),
+    FrameLengthIncorrect(u32, u32),
+    ZeroPaddingNotIntact(u8),
     FrameCompanyStampIncorrect(AesBlock),
     EmptyFrameData,
     SecureMemoryError(SecureMemoryError),
@@ -74,8 +75,8 @@ fn decode_message(flc: &Flc, aes: &Aes, message: HostDecodeMessage) -> Result<Re
     // Validate metadata is within bounds
     if !verify_timestamp(message.timestamp) { return Err(CommandError::FramePast(message.timestamp)); }
     if message.encrypted_frame.len() < 2 { return Err(CommandError::EmptyFrameData); }
-    if message.frame_length == 0 || message.frame_length > 64 { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
-    if ((((message.frame_length - 1) / 16) + 2) as usize) != message.encrypted_frame.len() { return Err(CommandError::FrameLengthIncorrect(message.frame_length)); }
+    if message.frame_length == 0 || message.frame_length > 64 { return Err(CommandError::FrameLengthIncorrect(message.frame_length, 0)); }
+    if ((((message.frame_length - 1) / 16) + 3) as usize) != message.encrypted_frame.len() { return Err(CommandError::FrameLengthIncorrect(message.frame_length, 16)); }
     // Get and verify subscription if not on emergency broadcast channel
     if message.channel_id != 0 {
         let subscription = retrieve_subscription(flc, message.channel_id);
@@ -85,7 +86,7 @@ fn decode_message(flc: &Flc, aes: &Aes, message: HostDecodeMessage) -> Result<Re
         if message.timestamp < subscription.start { return Err(CommandError::SubscriptionFuture(message.channel_id, subscription.start)); }
         if message.timestamp > subscription.end { return Err(CommandError::SubscriptionPast(message.channel_id, subscription.end)); }
     }
-    // Validate company stamp intact
+    // Validate beginning company stamp intact
     let decrypted_company_stamp = decrypt_company_stamp(flc, aes, message.channel_id, *message.encrypted_frame.first().unwrap());
     if decrypted_company_stamp.is_err() { return Err(CommandError::DecryptError(decrypted_company_stamp.unwrap_err())); }
     let decrypted_company_stamp = decrypted_company_stamp.unwrap();
@@ -94,14 +95,20 @@ fn decode_message(flc: &Flc, aes: &Aes, message: HostDecodeMessage) -> Result<Re
     let decrypted_frame = decrypt_frame(flc, aes, message.channel_id, message.encrypted_frame);
     if decrypted_frame.is_err() { return Err(CommandError::DecryptError(decrypted_frame.unwrap_err())); }
     let mut decrypted_frame = decrypted_frame.unwrap();
+    // Validate ending company stamp intact
+    let last_block: [u8; 16] = *decrypted_frame.last_chunk::<16>().unwrap();
+    if !verify_company_stamp(last_block) { return Err(CommandError::FrameCompanyStampIncorrect(last_block)); }
     // Validate frame length
-    if (decrypted_frame.len() as u32) < message.frame_length { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
-    if (decrypted_frame.len() as u32) - message.frame_length > 15 { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
+    for _ in 0..16 {
+        decrypted_frame.pop();
+    }
+    if (decrypted_frame.len() as u32) < message.frame_length { return Err(CommandError::FrameLengthIncorrect(decrypted_frame.len() as u32, message.frame_length)); }
+    if (decrypted_frame.len() as u32) - message.frame_length > 15 { return Err(CommandError::FrameLengthIncorrect(decrypted_frame.len() as u32, message.frame_length)); }
     while (decrypted_frame.len() as u32) > 0 && (decrypted_frame.len() as u32) > message.frame_length {
         let excess = decrypted_frame.pop().unwrap();
-        if excess != 0 { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
+        if excess != 0 { return Err(CommandError::ZeroPaddingNotIntact(excess)); }
     }
-    if (decrypted_frame.len() as u32) != message.frame_length { return Err(CommandError::FrameLengthIncorrect((decrypted_frame.len() as u32))); }
+    if (decrypted_frame.len() as u32) != message.frame_length { return Err(CommandError::FrameLengthIncorrect(decrypted_frame.len() as u32, message.frame_length)); }
     // Update timestamp and return
     set_timestamp(message.timestamp);
     Ok(ResponseDecodeMessage{frame: decrypted_frame})

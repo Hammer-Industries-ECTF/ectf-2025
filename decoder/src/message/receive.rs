@@ -91,12 +91,6 @@ fn receive_update_body(flc: &Flc, uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af
 fn receive_decode_body(flc: &Flc, uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af1>, Pin<0, 1, Af1>, (), ()>, aes: &Aes, header: MessageHeader) -> Result<HostDecodeMessage, RXError> {
     let encrypted_blocks: Vec<AesBlock>;
     match header.length {
-        48 => {
-            let mut body_buf: [u8; 48] = [0; 48];
-            transmit_ack(uart);
-            uart.read_bytes(&mut body_buf);
-            encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
-        },
         64 => {
             let mut body_buf: [u8; 64] = [0; 64];
             transmit_ack(uart);
@@ -115,6 +109,12 @@ fn receive_decode_body(flc: &Flc, uart: &BuiltUartPeripheral<Uart0, Pin<0, 0, Af
             uart.read_bytes(&mut body_buf);
             encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
         },
+        112 => {
+            let mut body_buf: [u8; 112] = [0; 112];
+            transmit_ack(uart);
+            uart.read_bytes(&mut body_buf);
+            encrypted_blocks = body_buf.chunks_exact(16).map(|x| *x.first_chunk::<16>().unwrap()).collect();
+        }
         other => { return Err(RXError::InvalidLength(other)); }
     }
     let decrypted_blocks = decrypt_message(flc, aes, encrypted_blocks);

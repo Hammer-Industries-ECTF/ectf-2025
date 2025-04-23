@@ -78,11 +78,13 @@ def output_verifier(encode_output: bytes,
     frame_package: bytes = anti_cbc_decrypt(secrets[str(channel)][0],
                                             secrets[str(channel)][1],
                                             decoded_frame[16:])
-    company_stamp = frame_package[0:16]
+    start_company_stamp = frame_package[0:16]
     frame_data = frame_package[16:16+frame_length]
+    end_company_stamp = frame_package[16+(((frame_length-1)//16)+1)*16:]
 
-    assert company_stamp == COMPANY_STAMP, "Decoded wrong company stamp"
+    assert start_company_stamp == COMPANY_STAMP, "Decoded wrong start company stamp"
     assert frame_data == expected_frame, "Decoded wrong frame"
+    assert end_company_stamp == COMPANY_STAMP, "Decoded wrong end company stamp"
 
 
 def anti_cbc_decrypt(key: bytes, iv: bytes, blocks: bytes) -> bytes:
